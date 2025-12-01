@@ -1,0 +1,770 @@
+1. Repository Layout
+bash
+agrocredit-ai/
+  backend/
+    app/
+      main.py
+      api/
+        routes_farmers.py
+        routes_bank.py
+        routes_auth.py
+        routes_scoring.py
+      core/
+        config.py
+        security.py
+      models/
+        user.py
+        farm.py
+        score.py
+      db.py
+    requirements.txt
+  ml_service/
+    app.py
+    model_dummy.py
+    requirements.txt
+  frontend/
+    package.json
+    next.config.mjs
+    app/
+      layout.tsx
+      page.tsx
+      farmer/
+        dashboard/page.tsx
+        farms/[id]/page.tsx
+        farms/new/page.tsx
+      bank/
+        dashboard/page.tsx
+        farms/[id]/page.tsx
+      login/page.tsx
+      register/page.tsx
+    components/
+      MapField.tsx
+      ScoreCard.tsx
+  docker-compose.yml
+  .env.example
+2. Backend: FastAPI Core
+2.1. backend/app/core/config.py
+python
+from pydantic import BaseSettings
+
+class Settings(BaseSettings):
+    PROJECT_NAME: str = "AgroCredit AI"
+    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres@db:5432/agrocredit"
+    JWT_SECRET_KEY: str = "CHANGE_ME"
+    JWT_ALGORITHM: str = "HS256"
+
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
+2.2. backend/app/db.py
+python
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+from .core.config import settings
+
+engine = create_engine(settings.DATABASE_URL, future=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+2.3. Models (simplified)
+backend/app/models/user.py:
+
+python
+from sqlalchemy import Column, Integer, String, Enum
+from ..db import Base
+import enum
+
+class UserRole(str, enum.Enum):
+    farmer = "farmer"
+    bank_officer = "bank_officer"
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    role = Column(Enum(UserRole), nullable=False)
+backend/app/models/farm.py:
+
+python
+from sqlalchemy import Column, Integer, String, ForeignKey, Float
+from sqlalchemy.dialects.postgresql import JSONB
+from ..db import Base
+
+class Farm(Base):
+    __tablename__ = "farms"
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String, nullable=False)
+    crop_type = Column(String, nullable=False)
+    acreage = Column(Float, nullable=False)
+    geometry = Column(JSONB, nullable=False)  # store GeoJSON polygon for MVP
+backend/app/models/score.py:
+
+python
+from sqlalchemy import Column, Integer, ForeignKey, Float, String
+from sqlalchemy.dialects.postgresql import JSONB
+from ..db import Base
+
+class Score(Base):
+    __tablename__ = "scores"
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id"), nullable=False)
+    numeric_score = Column(Float, nullable=False)
+    risk_category = Column(String, nullable=False)
+    factors = Column(JSONB, nullable=False)
+2.4. Security + Auth
+backend/app/core/security.py:
+
+python
+from datetime import datetime, timedelta
+from jose import jwt, JWTError
+from passlib.context import CryptContext
+from fastapi import HTTPException, status, Depends
+from fastapi.security import OAuth2PasswordBearer
+from .config import settings
+from ..db import SessionLocal
+from ..models.user import User, UserRole
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def verify_password(plain, hashed):
+    return pwd_context.verify(plain, hashed)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_minutes: int = 60):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+def get_current_user(token: str = Depends(oauth2_scheme), db=Depends(get_db)) -> User:
+    cred_exc = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        user_id: int | None = payload.get("sub")
+        if user_id is None:
+            raise cred_exc
+    except JWTError:
+        raise cred_exc
+    user = db.query(User).get(user_id)
+    if not user:
+        raise cred_exc
+    return user
+
+def require_role(*roles: UserRole):
+    def dependency(user: User = Depends(get_current_user)):
+        if user.role not in roles:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        return user
+    return dependency
+2.5. Routers
+backend/app/api/routes_auth.py:
+
+python
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, EmailStr
+from sqlalchemy.orm import Session
+from ..core.security import get_db, get_password_hash, verify_password, create_access_token
+from ..models.user import User, UserRole
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+class RegisterIn(BaseModel):
+    email: EmailStr
+    password: str
+    role: UserRole
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+@router.post("/register", response_model=Token)
+def register(data: RegisterIn, db: Session = Depends(get_db)):
+    if db.query(User).filter(User.email == data.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+    user = User(
+        email=data.email,
+        hashed_password=get_password_hash(data.password),
+        role=data.role,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    token = create_access_token({"sub": user.id})
+    return Token(access_token=token)
+
+class LoginIn(BaseModel):
+    email: EmailStr
+    password: str
+
+@router.post("/login", response_model=Token)
+def login(data: LoginIn, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user or not verify_password(data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = create_access_token({"sub": user.id})
+    return Token(access_token=token)
+backend/app/api/routes_farmers.py (core MVP):
+
+python
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from ..core.security import get_db, require_role
+from ..models.user import UserRole, User
+from ..models.farm import Farm
+from ..models.score import Score
+import httpx
+import os
+
+router = APIRouter(prefix="/farmer", tags=["farmer"])
+
+class FarmCreate(BaseModel):
+    name: str
+    crop_type: str
+    acreage: float
+    geometry: dict  # GeoJSON polygon
+
+class ScoreOut(BaseModel):
+    numeric_score: float
+    risk_category: str
+    factors: dict
+
+class FarmOut(BaseModel):
+    id: int
+    name: str
+    crop_type: str
+    acreage: float
+    geometry: dict
+    score: ScoreOut | None = None
+
+@router.post("/farms", response_model=FarmOut)
+def create_farm(
+    data: FarmCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role(UserRole.farmer)),
+):
+    farm = Farm(
+        owner_id=user.id,
+        name=data.name,
+        crop_type=data.crop_type,
+        acreage=data.acreage,
+        geometry=data.geometry,
+    )
+    db.add(farm)
+    db.commit()
+    db.refresh(farm)
+
+    # call ML service for MVP synchronous scoring
+    ml_url = os.getenv("ML_SERVICE_URL", "http://ml_service:8001/score")
+    payload = {
+        "crop_type": farm.crop_type,
+        "acreage": farm.acreage,
+        "geometry": farm.geometry,
+    }
+    r = httpx.post(ml_url, json=payload, timeout=20.0)
+    r.raise_for_status()
+    s = r.json()
+
+    score = Score(
+        farm_id=farm.id,
+        numeric_score=s["numeric_score"],
+        risk_category=s["risk_category"],
+        factors=s["factors"],
+    )
+    db.add(score)
+    db.commit()
+    db.refresh(score)
+
+    return FarmOut(
+        id=farm.id,
+        name=farm.name,
+        crop_type=farm.crop_type,
+        acreage=farm.acreage,
+        geometry=farm.geometry,
+        score=ScoreOut(
+            numeric_score=score.numeric_score,
+            risk_category=score.risk_category,
+            factors=score.factors,
+        ),
+    )
+backend/app/api/routes_bank.py:
+
+python
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from ..core.security import get_db, require_role
+from ..models.user import UserRole
+from ..models.farm import Farm
+from ..models.score import Score
+from pydantic import BaseModel
+
+router = APIRouter(prefix="/bank", tags=["bank"])
+
+class FarmerSummary(BaseModel):
+    farm_id: int
+    farmer_email: str
+    crop_type: str
+    numeric_score: float
+    risk_category: str
+
+@router.get("/farmers", response_model=list[FarmerSummary])
+def list_farmers(db: Session = Depends(get_db), _=Depends(require_role(UserRole.bank_officer))):
+    q = (
+        db.query(Farm, Score)
+        .join(Score, Score.farm_id == Farm.id)
+    )
+    res: list[FarmerSummary] = []
+    for farm, score in q:
+        res.append(
+            FarmerSummary(
+                farm_id=farm.id,
+                farmer_email="hidden@todo",  # join User if needed
+                crop_type=farm.crop_type,
+                numeric_score=score.numeric_score,
+                risk_category=score.risk_category,
+            )
+        )
+    return res
+backend/app/api/routes_scoring.py (public API):
+
+python
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from ..core.security import get_db, require_role
+from ..models.user import UserRole
+import httpx
+import os
+
+router = APIRouter(prefix="/api/v1", tags=["scoring"])
+
+class ScoreRequest(BaseModel):
+    crop_type: str
+    acreage: float
+    geometry: dict
+
+class ScoreResponse(BaseModel):
+    numeric_score: float
+    risk_category: str
+    factors: dict
+
+@router.post("/score", response_model=ScoreResponse)
+def score_endpoint(
+    req: ScoreRequest,
+    _=Depends(require_role(UserRole.bank_officer)),
+    db: Session = Depends(get_db),
+):
+    ml_url = os.getenv("ML_SERVICE_URL", "http://ml_service:8001/score")
+    r = httpx.post(ml_url, json=req.dict(), timeout=20.0)
+    r.raise_for_status()
+    return r.json()
+2.6. backend/app/main.py
+python
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from .core.config import settings
+from .db import Base, engine
+from .api import routes_auth, routes_farmers, routes_bank, routes_scoring
+
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title=settings.PROJECT_NAME)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(routes_auth.router)
+app.include_router(routes_farmers.router)
+app.include_router(routes_bank.router)
+app.include_router(routes_scoring.router)
+backend/requirements.txt (minimal):
+
+text
+fastapi[all]
+uvicorn[standard]
+SQLAlchemy
+psycopg2-binary
+python-jose[cryptography]
+passlib[bcrypt]
+httpx
+pydantic[email]
+3. ML Service (dummy NDVI + score)
+For MVP, stub NDVI/weather and produce a fake score; later replace with real Sentinel Hub + weather integration using patterns from open NDVI examples.​
+
+ml_service/model_dummy.py:
+
+python
+def compute_features(payload: dict) -> dict:
+    # TODO: call Sentinel Hub + weather APIs
+    # For MVP: derive trivial features
+    acreage = payload.get("acreage", 1.0)
+    crop_type = payload.get("crop_type", "unknown")
+    dummy_ndvi = 0.6  # placeholder
+
+    return {
+        "acreage": acreage,
+        "crop_type": crop_type,
+        "mean_ndvi": dummy_ndvi,
+    }
+
+def score_from_features(features: dict) -> tuple[float, str, dict]:
+    ndvi = features["mean_ndvi"]
+    acreage = features["acreage"]
+
+    base = ndvi * 80 + min(acreage, 10) * 2  # 0–100-ish
+    numeric_score = max(0, min(100, base))
+
+    if numeric_score >= 70:
+        risk = "Low"
+    elif numeric_score >= 40:
+        risk = "Medium"
+    else:
+        risk = "High"
+
+    factors = {
+        "vegetation_health": ndvi,
+        "farm_size": acreage,
+    }
+    return numeric_score, risk, factors
+ml_service/app.py:
+
+python
+from fastapi import FastAPI
+from pydantic import BaseModel
+from .model_dummy import compute_features, score_from_features
+
+app = FastAPI(title="AgroCredit ML Service")
+
+class ScoreIn(BaseModel):
+    crop_type: str
+    acreage: float
+    geometry: dict
+
+class ScoreOut(BaseModel):
+    numeric_score: float
+    risk_category: str
+    factors: dict
+
+@app.post("/score", response_model=ScoreOut)
+def score(req: ScoreIn):
+    features = compute_features(req.dict())
+    numeric_score, risk_category, factors = score_from_features(features)
+    return ScoreOut(
+        numeric_score=numeric_score,
+        risk_category=risk_category,
+        factors=factors,
+    )
+ml_service/requirements.txt:
+
+text
+fastapi[all]
+uvicorn[standard]
+pydantic
+4. Frontend: Next.js + React (farmer + bank)
+4.1. frontend/package.json (Next 14, TS, Tailwind example)
+json
+{
+  "name": "agrocredit-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "14.0.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "axios": "^1.6.0",
+    "react-leaflet": "^4.2.1",
+    "leaflet": "^1.9.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/react": "^18.0.0",
+    "@types/node": "^20.0.0",
+    "@types/leaflet": "^1.9.3"
+  }
+}
+4.2. Simple layout and login/register
+frontend/app/layout.tsx:
+
+tsx
+import "./globals.css";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
+frontend/app/login/page.tsx (simplified, no styling):
+
+tsx
+"use client";
+
+import { useState } from "react";
+import axios from "axios";
+import { useRouter } from "next/navigation";
+
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter();
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await axios.post("http://localhost:8000/auth/login", { email, password });
+    localStorage.setItem("token", res.data.access_token);
+    router.push("/farmer/dashboard"); // or bank based on role (extend later)
+  };
+
+  return (
+    <main>
+      <h1>Login</h1>
+      <form onSubmit={onSubmit}>
+        <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" />
+        <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Password" />
+        <button type="submit">Login</button>
+      </form>
+    </main>
+  );
+}
+frontend/app/register/page.tsx (farmer default):
+
+tsx
+"use client";
+
+import { useState } from "react";
+import axios from "axios";
+import { useRouter } from "next/navigation";
+
+export default function RegisterPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter();
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await axios.post("http://localhost:8000/auth/register", {
+      email,
+      password,
+      role: "farmer",
+    });
+    localStorage.setItem("token", res.data.access_token);
+    router.push("/farmer/dashboard");
+  };
+
+  return (
+    <main>
+      <h1>Register (Farmer)</h1>
+      <form onSubmit={onSubmit}>
+        <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" />
+        <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Password" />
+        <button type="submit">Register</button>
+      </form>
+    </main>
+  );
+}
+4.3. Farmer dashboard + new farm
+frontend/app/farmer/dashboard/page.tsx (minimal):
+
+tsx
+"use client";
+
+import { useEffect, useState } from "react";
+import axios from "axios";
+import Link from "next/link";
+
+type Farm = {
+  id: number;
+  name: string;
+  crop_type: string;
+  score?: {
+    numeric_score: number;
+    risk_category: string;
+  };
+};
+
+export default function FarmerDashboard() {
+  const [farms, setFarms] = useState<Farm[]>([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    axios
+      .get("http://localhost:8000/farmer/farms", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then(res => setFarms(res.data));
+  }, []);
+
+  return (
+    <main>
+      <h1>Your Fields</h1>
+      <Link href="/farmer/farms/new">Add Field</Link>
+      <ul>
+        {farms.map(f => (
+          <li key={f.id}>
+            <Link href={`/farmer/farms/${f.id}`}>
+              {f.name} – {f.score?.numeric_score ?? "N/A"} ({f.score?.risk_category ?? "-"})
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+}
+For brevity, implement a GET /farmer/farms endpoint in the backend mirroring create_farm logic.
+
+frontend/components/MapField.tsx (very simple polygon capture using Leaflet; extend from official examples).​
+
+tsx
+"use client";
+
+import { MapContainer, TileLayer, Polygon } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import { useState } from "react";
+
+type Props = {
+  onGeometryChange: (geometry: any) => void;
+};
+
+export default function MapField({ onGeometryChange }: Props) {
+  const [coords, setCoords] = useState<[number, number][]>([
+    [51.505, -0.09],
+    [51.51, -0.1],
+    [51.52, -0.12],
+  ]);
+
+  const geometry = {
+    type: "Polygon",
+    coordinates: [coords.map(([lat, lng]) => [lng, lat])],
+  };
+
+  // In a real app, add click handlers to adjust coords
+  onGeometryChange(geometry);
+
+  return (
+    <MapContainer center={[51.505, -0.09]} zoom={13} style={{ height: 300 }}>
+      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <Polygon positions={coords} />
+    </MapContainer>
+  );
+}
+frontend/app/farmer/farms/new/page.tsx:
+
+tsx
+"use client";
+
+import { useState } from "react";
+import axios from "axios";
+import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+
+const MapField = dynamic(() => import("@/components/MapField"), { ssr: false });
+
+export default function NewFarmPage() {
+  const [name, setName] = useState("");
+  const [cropType, setCropType] = useState("");
+  const [acreage, setAcreage] = useState(1);
+  const [geometry, setGeometry] = useState<any | null>(null);
+  const router = useRouter();
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem("token");
+    const res = await axios.post(
+      "http://localhost:8000/farmer/farms",
+      { name, crop_type: cropType, acreage, geometry },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    router.push(`/farmer/farms/${res.data.id}`);
+  };
+
+  return (
+    <main>
+      <h1>Add Field</h1>
+      <form onSubmit={onSubmit}>
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="Field name" />
+        <input value={cropType} onChange={e => setCropType(e.target.value)} placeholder="Crop type" />
+        <input
+          type="number"
+          value={acreage}
+          onChange={e => setAcreage(parseFloat(e.target.value))}
+          placeholder="Acreage"
+        />
+        <MapField onGeometryChange={setGeometry} />
+        <button type="submit">Save & Score</button>
+      </form>
+    </main>
+  );
+}
+Bank dashboard pages follow similar patterns: call /bank/farmers and render table; detail page calls /bank/farms/{id}.
+
+5. Docker Compose
+docker-compose.yml:
+
+text
+version: "3.9"
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: agrocredit
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/agrocredit
+      ML_SERVICE_URL: http://ml_service:8001/score
+    depends_on:
+      - db
+      - ml_service
+    ports:
+      - "8000:8000"
+
+  ml_service:
+    build: ./ml_service
+    command: uvicorn app:app --host 0.0.0.0 --port 8001 --reload
+    ports:
+      - "8001:8001"
+
+  frontend:
+    build: ./frontend
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - backend
