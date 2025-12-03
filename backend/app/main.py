@@ -33,20 +33,20 @@ app.include_router(bank_router)
 app.include_router(scoring_router)
 
 
-@app.get("/")
-def root():
-    """Root endpoint"""
+@app.get("/api/health")
+def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy"}
+
+
+@app.get("/api")
+def api_root():
+    """API root endpoint"""
     return {
         "message": "AgroCredit AI API",
         "version": "1.0.0",
         "docs": "/docs"
     }
-
-
-@app.get("/health")
-def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}
 
 
 # Mount static files
