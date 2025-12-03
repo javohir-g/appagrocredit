@@ -1,4 +1,4 @@
-# Running AgroCredit AI Without Docker
+# Running AgroScoring.AI Without Docker
 
 ## Prerequisites
 

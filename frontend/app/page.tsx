@@ -30,7 +30,7 @@ export default function HomePage() {
                 </div>
 
                 <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-slate-900 mb-8 tracking-tight leading-tight max-w-5xl mx-auto">
-                    AgroCredit AI – Умные кредитные решения для <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">сельского хозяйства</span>
+                    AgroScoring.AI – Умные кредитные решения для <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">сельского хозяйства</span>
                 </h1>
 
                 <p className="text-xl text-slate-600 mb-12 max-w-2xl mx-auto leading-relaxed">

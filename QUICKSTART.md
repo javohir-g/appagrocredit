@@ -1,4 +1,4 @@
-# AgroCredit AI - Quick Start Guide
+# AgroScoring.AI - Quick Start Guide
 
 ## Prerequisites
 - Docker Desktop installed and running

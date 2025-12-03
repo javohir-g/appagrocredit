@@ -43,7 +43,7 @@ def health_check():
 def api_root():
     """API root endpoint"""
     return {
-        "message": "AgroCredit AI API",
+        "message": "AgroScoring.AI API",
         "version": "1.0.0",
         "docs": "/docs"
     }

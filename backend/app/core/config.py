@@ -13,7 +13,7 @@ print(f"[CONFIG] .env file exists: {ENV_FILE.exists()}")
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "AgroCredit AI"
+    PROJECT_NAME: str = "AgroScoring.AI"
     BACKEND_CORS_ORIGINS: str = "http://localhost:3000"
     DATABASE_URL: str = "sqlite:///./agrocredit.db"
     JWT_SECRET_KEY: str = "CHANGE_ME_IN_PRODUCTION"

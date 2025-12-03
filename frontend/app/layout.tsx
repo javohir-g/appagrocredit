@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: "AgroCredit AI - Agricultural Credit Scoring",
+    title: "AgroScoring.AI - Agricultural Credit Scoring",
     description: "AI-driven agricultural credit scoring platform for banks and farmers",
 };
 
