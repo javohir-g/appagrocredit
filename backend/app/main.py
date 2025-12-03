@@ -1,4 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
 from .db import init_db
@@ -43,3 +47,37 @@ def root():
 def health_check():
     """Health check endpoint"""
     return {"status": "healthy"}
+
+
+# Mount static files
+# We assume the frontend is built to 'frontend/out' relative to the project root
+# and we are running from the project root.
+static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend", "out")
+
+if os.path.exists(static_dir):
+    app.mount("/_next", StaticFiles(directory=os.path.join(static_dir, "_next")), name="next")
+    
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """Serve frontend static files"""
+        # Check if file exists in static dir
+        file_path = os.path.join(static_dir, full_path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        
+        # Check if it's an HTML file without extension (e.g. /dashboard -> /dashboard.html)
+        html_path = os.path.join(static_dir, f"{full_path}.html")
+        if os.path.exists(html_path) and os.path.isfile(html_path):
+            return FileResponse(html_path)
+            
+        # Default to index.html for SPA routing (though Next.js export is multi-page, 
+        # this handles root and 404s gracefully if we want)
+        # But for Next.js static export, we usually want to serve specific files.
+        # If not found, serve 404.html or index.html
+        if full_path == "" or full_path == "/":
+             return FileResponse(os.path.join(static_dir, "index.html"))
+             
+        return FileResponse(os.path.join(static_dir, "404.html"))
+else:
+    print(f"Warning: Static directory {static_dir} does not exist. Frontend will not be served.")
+
