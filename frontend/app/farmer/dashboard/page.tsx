@@ -95,7 +95,7 @@ export default function FarmerDashboard() {
                     {farms.map((farm) => (
                         <Link
                             key={farm.id}
-                            href={`/farmer/farms/${farm.id}`}
+                            href={`/farmer/farms/view?id=${farm.id}`}
                             className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group flex flex-col"
                         >
                             <div className="p-5 flex-1">

@@ -36,7 +36,7 @@ export default function NewFarmPage() {
                 geometry,
             });
 
-            router.push(`/farmer/farms/${response.data.id}`);
+            router.push(`/farmer/farms/view?id=${response.data.id}`);
         } catch (err: any) {
             setError(err.response?.data?.detail || "Failed to create field. Please try again.");
         } finally {

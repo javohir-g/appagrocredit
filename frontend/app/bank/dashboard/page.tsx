@@ -235,7 +235,7 @@ export default function BankDashboard() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <Link
-                                                href={`/bank/farms/${farmer.farm_id}`}
+                                                href={`/bank/farms/view?id=${farmer.farm_id}`}
                                                 className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-medium text-xs group-hover:underline"
                                             >
                                                 View Analysis <ArrowRight className="w-3 h-3" />

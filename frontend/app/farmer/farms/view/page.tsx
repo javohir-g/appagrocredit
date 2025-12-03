@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import api from "@/utils/api";
 import ScoreCard from "@/components/ScoreCard";
@@ -21,16 +21,18 @@ interface Farm {
     };
 }
 
-export default function FarmDetailPage() {
+function FarmDetailContent() {
     const [farm, setFarm] = useState<Farm | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
-    const params = useParams();
-    const farmId = params.id;
+    const searchParams = useSearchParams();
+    const farmId = searchParams.get("id");
 
     useEffect(() => {
         if (farmId) {
             fetchFarm();
+        } else {
+            setLoading(false);
         }
     }, [farmId]);
 
@@ -51,6 +53,20 @@ export default function FarmDetailPage() {
                 <div className="text-center">
                     <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
                     <p className="mt-4 text-gray-600">Loading field details...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!farmId) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="card text-center">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Invalid Request</h2>
+                    <p className="text-gray-600 mb-4">No field ID provided.</p>
+                    <button onClick={() => router.push("/farmer/dashboard")} className="btn-primary">
+                        Back to Dashboard
+                    </button>
                 </div>
             </div>
         );
@@ -141,5 +157,20 @@ export default function FarmDetailPage() {
                 </div>
             </main>
         </div>
+    );
+}
+
+export default function FarmDetailPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                    <p className="mt-4 text-gray-600">Loading...</p>
+                </div>
+            </div>
+        }>
+            <FarmDetailContent />
+        </Suspense>
     );
 }
