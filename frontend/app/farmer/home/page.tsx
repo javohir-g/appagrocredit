@@ -13,7 +13,9 @@ import {
     ArrowRight,
     Calendar,
     Sprout,
-    MessageCircle
+    MessageCircle,
+    Zap,
+    Flame
 } from "lucide-react";
 
 export default function FarmerHome() {
@@ -112,6 +114,63 @@ export default function FarmerHome() {
                 <Link href="/farmer/chat" className="inline-flex items-center gap-2 text-sm font-medium bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors mt-2">
                     Спросить AI <ArrowRight className="w-4 h-4" />
                 </Link>
+            </div>
+
+            {/* Utility Meters */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-slate-900">Счётчики хозяйства</h2>
+                    <button className="text-xs font-medium text-emerald-600 hover:text-emerald-700">
+                        Внести показания
+                    </button>
+                </div>
+
+                <div className="space-y-3">
+                    {/* Electricity */}
+                    <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl border border-amber-100">
+                        <div className="p-2 bg-amber-100 rounded-lg">
+                            <Zap className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-xs text-amber-700 font-medium mb-0.5">Электроэнергия</p>
+                            <p className="text-lg font-bold text-slate-900">12,450 кВт·ч</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xs text-slate-500">За месяц</p>
+                            <p className="text-sm font-semibold text-slate-900">+340 кВт·ч</p>
+                        </div>
+                    </div>
+
+                    {/* Gas */}
+                    <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-xl border border-orange-100">
+                        <div className="p-2 bg-orange-100 rounded-lg">
+                            <Flame className="w-5 h-5 text-orange-600" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-xs text-orange-700 font-medium mb-0.5">Газ</p>
+                            <p className="text-lg font-bold text-slate-900">8,230 м³</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xs text-slate-500">За месяц</p>
+                            <p className="text-sm font-semibold text-slate-900">+180 м³</p>
+                        </div>
+                    </div>
+
+                    {/* Water */}
+                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                            <Droplets className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-xs text-blue-700 font-medium mb-0.5">Вода</p>
+                            <p className="text-lg font-bold text-slate-900">3,560 м³</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xs text-slate-500">За месяц</p>
+                            <p className="text-sm font-semibold text-slate-900">+95 м³</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Quick Links */}
