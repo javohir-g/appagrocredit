@@ -1,252 +1,281 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/utils/api";
-import RiskBadge from "@/components/RiskBadge";
 import {
-    LayoutGrid,
-    ShieldCheck,
+    TrendingUp,
+    TrendingDown,
+    Users,
+    FileText,
+    DollarSign,
     AlertTriangle,
-    AlertOctagon,
-    ArrowRight
+    ArrowRight,
+    CheckCircle2,
+    XCircle,
+    Clock
 } from "lucide-react";
 
-interface FarmerSummary {
-    farm_id: number;
-    farm_name: string;
-    farmer_email: string;
-    crop_type: string;
-    acreage: number;
-    numeric_score: number;
-    risk_category: string;
+interface DashboardStats {
+    newApplications: number;
+    approved: number;
+    rejected: number;
+    pending: number;
+    averageScore: number;
+    totalLoans: number;
+    overduePayments: number;
+    overduePercentage: number;
+}
+
+interface RecentApplication {
+    id: number;
+    farmerName: string;
+    amount: number;
+    riskScore: number;
+    riskCategory: string;
+    status: string;
+    date: string;
 }
 
 export default function BankDashboard() {
-    const [farmers, setFarmers] = useState<FarmerSummary[]>([]);
-    const [filteredFarmers, setFilteredFarmers] = useState<FarmerSummary[]>([]);
-    const [riskFilter, setRiskFilter] = useState<string>("all");
     const [loading, setLoading] = useState(true);
-    const router = useRouter();
+    const [stats, setStats] = useState<DashboardStats>({
+        newApplications: 12,
+        approved: 8,
+        rejected: 2,
+        pending: 15,
+        averageScore: 72.5,
+        totalLoans: 450000,
+        overduePayments: 15000,
+        overduePercentage: 3.3
+    });
+    const [recentApplications, setRecentApplications] = useState<RecentApplication[]>([]);
 
     useEffect(() => {
-        // v1.0: No auth check needed
-        fetchFarmers();
+        fetchDashboardData();
     }, []);
 
-    useEffect(() => {
-        if (riskFilter === "all") {
-            setFilteredFarmers(farmers);
-        } else {
-            setFilteredFarmers(farmers.filter((f) => f.risk_category.toLowerCase() === riskFilter));
-        }
-    }, [riskFilter, farmers]);
-
-    const fetchFarmers = async () => {
+    const fetchDashboardData = async () => {
         try {
-            const response = await api.get("/bank/farmers");
-            setFarmers(response.data);
-            setFilteredFarmers(response.data);
+            // Mock data for now - replace with real API calls later
+            setRecentApplications([
+                { id: 1, farmerName: "Иван Петров", amount: 50000, riskScore: 85, riskCategory: "Low", status: "pending", date: "2024-12-03" },
+                { id: 2, farmerName: "Мария Сидорова", amount: 75000, riskScore: 68, riskCategory: "Medium", status: "pending", date: "2024-12-03" },
+                { id: 3, farmerName: "Алексей Козлов", amount: 30000, riskScore: 45, riskCategory: "High", status: "pending", date: "2024-12-02" },
+            ]);
         } catch (error) {
-            console.error("Failed to fetch farmers:", error);
+            console.error("Failed to fetch dashboard data:", error);
         } finally {
             setLoading(false);
         }
     };
 
-    const stats = {
-        total: farmers.length,
-        low: farmers.filter((f) => f.risk_category === "Low").length,
-        medium: farmers.filter((f) => f.risk_category === "Medium").length,
-        high: farmers.filter((f) => f.risk_category === "High").length,
+    const getRiskColor = (category: string) => {
+        switch (category.toLowerCase()) {
+            case "low": return "text-emerald-600 bg-emerald-50";
+            case "medium": return "text-amber-600 bg-amber-50";
+            case "high": return "text-red-600 bg-red-50";
+            default: return "text-slate-600 bg-slate-50";
+        }
     };
 
+    const getStatusBadge = (status: string) => {
+        switch (status) {
+            case "pending":
+                return <span className="flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full"><Clock className="w-3 h-3" />На проверке</span>;
+            case "approved":
+                return <span className="flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full"><CheckCircle2 className="w-3 h-3" />Одобрено</span>;
+            case "rejected":
+                return <span className="flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 px-2.5 py-1 rounded-full"><XCircle className="w-3 h-3" />Отклонено</span>;
+            default:
+                return null;
+        }
+    };
+
+    if (loading) {
+        return (
+            <main className="flex-1 overflow-y-auto p-6 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+                    <p className="mt-4 text-slate-600">Загрузка данных...</p>
+                </div>
+            </main>
+        );
+    }
+
     return (
-        <main className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth pb-20">
-
-            {/* Breadcrumbs & Title */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-                        <span>Platform</span>
-                        <i className="w-1 h-1 rounded-full bg-slate-300"></i>
-                        <span className="text-slate-900 font-medium">Portfolio Overview</span>
-                    </div>
-                    <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Bank Dashboard</h1>
-                </div>
-                <div className="flex gap-3">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        System Active
-                    </span>
-                </div>
+        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Header */}
+            <div>
+                <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+                <p className="text-sm text-slate-500 mt-1">Обзор ключевых показателей и активности</p>
             </div>
 
-            {/* KEY METRICS GRID */}
+            {/* Key Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Total Farms */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <LayoutGrid className="w-16 h-16 text-slate-600" />
+                {/* New Applications */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-4">
+                        <div className="p-2.5 bg-blue-50 rounded-lg">
+                            <FileText className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
+                            <TrendingUp className="w-3 h-3" />
+                            +12%
+                        </span>
                     </div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Total Farms</p>
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-slate-900">{stats.total}</span>
-                    </div>
-                    <div className="mt-3 w-full bg-slate-100 rounded-full h-1.5">
-                        <div className="bg-slate-500 h-1.5 rounded-full" style={{ width: '100%' }}></div>
-                    </div>
-                    <p className="text-[10px] text-slate-600 mt-2 font-medium">Registered Fields</p>
+                    <p className="text-sm text-slate-500 mb-1">Новые заявки</p>
+                    <p className="text-3xl font-bold text-slate-900">{stats.newApplications}</p>
+                    <p className="text-xs text-slate-400 mt-2">Сегодня</p>
                 </div>
 
-                {/* Low Risk */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <ShieldCheck className="w-16 h-16 text-emerald-600" />
+                {/* Approved/Rejected */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-4">
+                        <div className="p-2.5 bg-emerald-50 rounded-lg">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div className="p-2.5 bg-red-50 rounded-lg ml-2">
+                            <XCircle className="w-5 h-5 text-red-600" />
+                        </div>
                     </div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Low Risk</p>
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-emerald-600">{stats.low}</span>
-                    </div>
-                    <div className="mt-3 w-full bg-slate-100 rounded-full h-1.5">
-                        <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${stats.total ? (stats.low / stats.total) * 100 : 0}%` }}></div>
-                    </div>
-                    <p className="text-[10px] text-emerald-600 mt-2 font-medium">Safe Investments</p>
+                    <p className="text-sm text-slate-500 mb-1">Одобрено / Отклонено</p>
+                    <p className="text-3xl font-bold text-slate-900">{stats.approved} <span className="text-lg text-slate-400">/</span> <span className="text-xl font-semibold text-red-600">{stats.rejected}</span></p>
+                    <p className="text-xs text-slate-400 mt-2">За сегодня</p>
                 </div>
 
-                {/* Medium Risk */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <AlertTriangle className="w-16 h-16 text-amber-500" />
+                {/* Average Risk Score */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-4">
+                        <div className="p-2.5 bg-purple-50 rounded-lg">
+                            <AlertTriangle className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
+                            <TrendingUp className="w-3 h-3" />
+                            +5.2
+                        </span>
                     </div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Medium Risk</p>
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-amber-500">{stats.medium}</span>
-                    </div>
-                    <div className="mt-3 w-full bg-slate-100 rounded-full h-1.5">
-                        <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: `${stats.total ? (stats.medium / stats.total) * 100 : 0}%` }}></div>
-                    </div>
-                    <p className="text-[10px] text-amber-600 mt-2 font-medium">Monitor Closely</p>
+                    <p className="text-sm text-slate-500 mb-1">Средний скоринг</p>
+                    <p className="text-3xl font-bold text-slate-900">{stats.averageScore}<span className="text-lg text-slate-400">/100</span></p>
+                    <p className="text-xs text-slate-400 mt-2">Все активные</p>
                 </div>
 
-                {/* High Risk */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <AlertOctagon className="w-16 h-16 text-red-600" />
+                {/* Total Loans */}
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-4">
+                        <div className="p-2.5 bg-amber-50 rounded-lg">
+                            <DollarSign className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <span className="flex items-center gap-1 text-xs font-medium text-red-600">
+                            <TrendingDown className="w-3 h-3" />
+                            {stats.overduePercentage}%
+                        </span>
                     </div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">High Risk</p>
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-red-600">{stats.high}</span>
-                    </div>
-                    <div className="mt-3 w-full bg-slate-100 rounded-full h-1.5">
-                        <div className="bg-red-600 h-1.5 rounded-full" style={{ width: `${stats.total ? (stats.high / stats.total) * 100 : 0}%` }}></div>
-                    </div>
-                    <p className="text-[10px] text-red-600 mt-2 font-medium">Action Required</p>
+                    <p className="text-sm text-slate-500 mb-1">Выдано кредитов</p>
+                    <p className="text-3xl font-bold text-slate-900">${(stats.totalLoans / 1000).toFixed(0)}K</p>
+                    <p className="text-xs text-red-500 mt-2">Просрочка: ${(stats.overduePayments / 1000).toFixed(0)}K</p>
                 </div>
             </div>
 
-            {/* Filters & Table Section */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50">
-                    <h3 className="font-semibold text-slate-900">Farmer Portfolio</h3>
-
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setRiskFilter("all")}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${riskFilter === "all"
-                                ? "bg-slate-900 text-white shadow-sm"
-                                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-                                }`}
-                        >
-                            All
-                        </button>
-                        <button
-                            onClick={() => setRiskFilter("low")}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${riskFilter === "low"
-                                ? "bg-emerald-600 text-white shadow-sm"
-                                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-                                }`}
-                        >
-                            Low Risk
-                        </button>
-                        <button
-                            onClick={() => setRiskFilter("medium")}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${riskFilter === "medium"
-                                ? "bg-amber-500 text-white shadow-sm"
-                                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-                                }`}
-                        >
-                            Medium Risk
-                        </button>
-                        <button
-                            onClick={() => setRiskFilter("high")}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${riskFilter === "high"
-                                ? "bg-red-600 text-white shadow-sm"
-                                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-                                }`}
-                        >
-                            High Risk
-                        </button>
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Recent Applications */}
+                <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h2 className="text-lg font-semibold text-slate-900">Последние заявки</h2>
+                            <p className="text-sm text-slate-500 mt-0.5">Требуют вашего внимания</p>
+                        </div>
+                        <Link href="/bank/applications" className="text-sm font-medium text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+                            Все заявки <ArrowRight className="w-4 h-4" />
+                        </Link>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                        {recentApplications.map((app) => (
+                            <Link key={app.id} href={`/bank/applications/view?id=${app.id}`} className="p-6 hover:bg-slate-50 transition-colors block">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold text-sm">
+                                            {app.farmerName.split(' ').map(n => n[0]).join('')}
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-slate-900">{app.farmerName}</p>
+                                            <p className="text-sm text-slate-500">{new Date(app.date).toLocaleDateString('ru-RU')}</p>
+                                        </div>
+                                    </div>
+                                    {getStatusBadge(app.status)}
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div>
+                                            <p className="text-xs text-slate-500">Сумма</p>
+                                            <p className="text-sm font-semibold text-slate-900">${app.amount.toLocaleString()}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500">AI-скоринг</p>
+                                            <p className={`text-sm font-semibold ${getRiskColor(app.riskCategory)}`}>{app.riskScore}/100</p>
+                                        </div>
+                                    </div>
+                                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getRiskColor(app.riskCategory)}`}>
+                                        {app.riskCategory === "Low" ? "Низкий риск" : app.riskCategory === "Medium" ? "Средний риск" : "Высокий риск"}
+                                    </span>
+                                </div>
+                            </Link>
+                        ))}
                     </div>
                 </div>
 
-                {/* Farmers Table */}
-                {loading ? (
-                    <div className="text-center py-12">
-                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-                        <p className="mt-4 text-sm text-slate-500">Loading portfolio data...</p>
+                {/* Quick Actions */}
+                <div className="space-y-4">
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                        <h2 className="text-lg font-semibold text-slate-900 mb-4">Быстрые действия</h2>
+                        <div className="space-y-3">
+                            <Link href="/bank/applications" className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group">
+                                <div className="p-2 bg-emerald-50 rounded-lg group-hover:bg-emerald-100 transition-colors">
+                                    <FileText className="w-4 h-4 text-emerald-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-slate-900">Новые заявки</p>
+                                    <p className="text-xs text-slate-500">{stats.pending} ожидают</p>
+                                </div>
+                                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600" />
+                            </Link>
+                            <Link href="/bank/farmers" className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group">
+                                <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                                    <Users className="w-4 h-4 text-blue-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-slate-900">Фермеры</p>
+                                    <p className="text-xs text-slate-500">Просмотр каталога</p>
+                                </div>
+                                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600" />
+                            </Link>
+                            <Link href="/bank/loans" className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group">
+                                <div className="p-2 bg-amber-50 rounded-lg group-hover:bg-amber-100 transition-colors">
+                                    <DollarSign className="w-4 h-4 text-amber-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-slate-900">Кредиты</p>
+                                    <p className="text-xs text-slate-500">Управление портфелем</p>
+                                </div>
+                                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-600" />
+                            </Link>
+                        </div>
                     </div>
-                ) : filteredFarmers.length === 0 ? (
-                    <div className="text-center py-12">
-                        <p className="text-slate-500 text-sm">No farms found matching the selected filter</p>
+
+                    {/* Pending Count */}
+                    <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-lg p-6 text-white">
+                        <div className="flex items-center justify-between mb-2">
+                            <Clock className="w-8 h-8 opacity-80" />
+                            <span className="text-xs font-medium bg-white/20 px-2 py-1 rounded-full">Приоритет</span>
+                        </div>
+                        <p className="text-3xl font-bold mb-1">{stats.pending}</p>
+                        <p className="text-sm opacity-90">Заявок на проверке</p>
+                        <Link href="/bank/applications" className="mt-4 inline-block text-sm font-medium underline hover:no-underline">
+                            Начать проверку →
+                        </Link>
                     </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-slate-500 uppercase bg-slate-50/50 border-b border-slate-100">
-                                <tr>
-                                    <th className="px-6 py-3 font-medium">Farm Name</th>
-                                    <th className="px-6 py-3 font-medium">Farmer</th>
-                                    <th className="px-6 py-3 font-medium">Crop</th>
-                                    <th className="px-6 py-3 font-medium">Acreage</th>
-                                    <th className="px-6 py-3 font-medium">Score</th>
-                                    <th className="px-6 py-3 font-medium">Risk</th>
-                                    <th className="px-6 py-3 font-medium text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {filteredFarmers.map((farmer) => (
-                                    <tr key={farmer.farm_id} className="hover:bg-slate-50/80 transition-colors group">
-                                        <td className="px-6 py-4 font-medium text-slate-900">{farmer.farm_name}</td>
-                                        <td className="px-6 py-4 text-slate-500">{farmer.farmer_email}</td>
-                                        <td className="px-6 py-4 capitalize text-slate-700">
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-xs">
-                                                {farmer.crop_type}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-slate-600">{farmer.acreage} ac</td>
-                                        <td className="px-6 py-4">
-                                            <span className="font-bold text-slate-900">{farmer.numeric_score.toFixed(1)}</span>
-                                            <span className="text-slate-400 text-xs ml-1">/ 100</span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <RiskBadge category={farmer.risk_category} />
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <Link
-                                                href={`/bank/farms/view?id=${farmer.farm_id}`}
-                                                className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-medium text-xs group-hover:underline"
-                                            >
-                                                View Analysis <ArrowRight className="w-3 h-3" />
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                </div>
             </div>
         </main>
     );

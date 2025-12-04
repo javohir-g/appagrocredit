@@ -19,10 +19,10 @@ export default function Sidebar() {
 
     const menuItems = [
         { name: "Dashboard", href: "/bank/dashboard", icon: LayoutGrid },
+        { name: "Applications", href: "/bank/applications", icon: ShieldAlert },
         { name: "Farmers", href: "/bank/farmers", icon: Users },
-        { name: "Field Analysis", href: "/bank/analysis", icon: Sprout },
-        { name: "Risk Scoring", href: "/bank/risk", icon: ShieldAlert },
-        { name: "Analytics", href: "/bank/analytics", icon: BarChart3 },
+        { name: "Loans", href: "/bank/loans", icon: BarChart3 },
+        { name: "Analytics", href: "/bank/analytics", icon: Sprout },
     ];
 
     return (
@@ -33,7 +33,7 @@ export default function Sidebar() {
                     <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shadow-emerald-200 shadow-lg">
                         <Sprout className="w-5 h-5 text-white" />
                     </div>
-                    <span className="text-lg font-bold text-slate-900 tracking-tight">AgroCredit <span className="text-emerald-600">AI</span></span>
+                    <span className="text-lg font-bold text-slate-900 tracking-tight">AgroScoring<span className="text-emerald-600">.AI</span></span>
                 </div>
             </div>
 
@@ -50,8 +50,8 @@ export default function Sidebar() {
                             key={item.href}
                             href={item.href}
                             className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 group ${active
-                                    ? "text-emerald-700 bg-emerald-50 shadow-sm ring-1 ring-emerald-100"
-                                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                ? "text-emerald-700 bg-emerald-50 shadow-sm ring-1 ring-emerald-100"
+                                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                                 }`}
                         >
                             <Icon className={`w-4 h-4 transition-colors ${active ? "text-emerald-600" : "text-slate-400 group-hover:text-slate-600"
@@ -63,7 +63,7 @@ export default function Sidebar() {
 
                 <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4 px-2 mt-8">System</div>
 
-                <Link href="#" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors group">
+                <Link href="/bank/settings" className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors group">
                     <Settings className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
                     Settings
                 </Link>
