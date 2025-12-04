@@ -30,7 +30,7 @@ export default function FarmerSidebar() {
                     <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shadow-emerald-200 shadow-lg">
                         <Sprout className="w-5 h-5 text-white" />
                     </div>
-                    <span className="text-lg font-bold text-slate-900 tracking-tight">AgroCredit <span className="text-emerald-600">AI</span></span>
+                    <span className="text-lg font-bold text-slate-900 tracking-tight">AgroScoring<span className="text-emerald-600">.AI</span></span>
                 </div>
             </div>
 
@@ -47,8 +47,8 @@ export default function FarmerSidebar() {
                             key={item.href}
                             href={item.href}
                             className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 group ${active
-                                    ? "text-emerald-700 bg-emerald-50 shadow-sm ring-1 ring-emerald-100"
-                                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                ? "text-emerald-700 bg-emerald-50 shadow-sm ring-1 ring-emerald-100"
+                                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                                 }`}
                         >
                             <Icon className={`w-4 h-4 transition-colors ${active ? "text-emerald-600" : "text-slate-400 group-hover:text-slate-600"

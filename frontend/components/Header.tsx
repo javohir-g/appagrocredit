@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Bell, Download, Menu } from "lucide-react";
+import { Search, Bell, Menu } from "lucide-react";
 
 export default function Header() {
     return (
@@ -25,10 +25,6 @@ export default function Header() {
                 <button className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
                     <Bell className="w-5 h-5" />
                     <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                </button>
-                <div className="h-8 w-px bg-slate-200 mx-1"></div>
-                <button className="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2 rounded-lg text-xs font-medium shadow-sm transition-all flex items-center gap-2">
-                    <Download className="w-3 h-3" /> Export Report
                 </button>
             </div>
         </header>
