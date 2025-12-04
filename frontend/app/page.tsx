@@ -41,7 +41,7 @@ export default function HomePage() {
                     <button
                         onClick={() => {
                             localStorage.setItem('userRole', 'farmer');
-                            window.location.href = '/farmer/dashboard';
+                            window.location.href = '/farmer/home';
                         }}
                         className="group relative px-8 py-4 bg-emerald-600 text-white rounded-2xl font-semibold text-lg shadow-xl shadow-emerald-200 hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95 w-full sm:w-auto"
                     >

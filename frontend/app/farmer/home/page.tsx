@@ -44,22 +44,6 @@ export default function FarmerHome() {
 
     return (
         <div className="p-4 space-y-4">
-            {/* Greeting Card */}
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
-                <h1 className="text-2xl font-bold mb-1">Ассалому алейкум, {farmerName}! 👋</h1>
-                <p className="text-emerald-100 text-sm">Добро пожаловать в вашу агропанель</p>
-
-                <div className="grid grid-cols-3 gap-3 mt-4">
-                    {quickStats.map((stat, index) => (
-                        <div key={index} className="bg-white/20 backdrop-blur-sm rounded-xl p-3 text-center">
-                            <div className="text-2xl mb-1">{stat.icon}</div>
-                            <div className="text-lg font-bold">{stat.value}</div>
-                            <div className="text-xs text-emerald-100">{stat.label}</div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
             {/* Current Loan Card */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 border-b border-blue-200">
