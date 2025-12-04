@@ -6,7 +6,7 @@ import os
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
 from .db import init_db
-from .api import auth_router, farmers_router, bank_router, scoring_router
+from .api import auth_router, farmers_router, farmer_extended_router, bank_router, bank_extended_router, scoring_router
 
 # Initialize database tables
 init_db()
@@ -29,7 +29,9 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_router)
 app.include_router(farmers_router)
+app.include_router(farmer_extended_router)
 app.include_router(bank_router)
+app.include_router(bank_extended_router)
 app.include_router(scoring_router)
 
 

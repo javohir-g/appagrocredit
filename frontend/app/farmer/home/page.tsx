@@ -4,14 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import {
     CreditCard,
-    Send,
     FileText,
     TrendingUp,
     Droplets,
-    Sun,
     AlertCircle,
     ArrowRight,
-    Calendar,
     Sprout,
     MessageCircle,
     Zap,
@@ -19,82 +16,42 @@ import {
 } from "lucide-react";
 
 export default function FarmerHome() {
-    const farmerName = "Иван";
-
-    const currentLoan = {
-        nextPayment: 2500,
-        nextPaymentDate: "15 декабря 2024",
-        totalAmount: 50000,
-        paid: 15000,
-        remaining: 35000,
-        progress: 30,
+    // Mock data - в будущем подключить к API
+    const totalCredits = {
+        totalDebt: 80000,  // Общий долг (remaining из всех кредитов)
+        activeCredits: 2,   // Количество активных кредитов
+        totalPaid: 40000    // Всего выплачено
     };
 
     const aiRecommendation = {
-        type: "irrigation",
         title: "Рекомендация по поливу",
         message: "На основе прогноза погоды, рекомендуем полив через 2 дня. Ожидается сухая погода в течение недели.",
-        icon: Droplets,
-        color: "blue",
     };
-
-    const quickStats = [
-        { label: "Активных полей", value: "3", icon: "🌾" },
-        { label: "Здоровье", value: "Хорошее", icon: "✅" },
-        { label: "Прогноз", value: "+12%", icon: "📈" },
-    ];
 
     return (
         <div className="p-4 space-y-4">
-            {/* Current Loan Card */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 border-b border-blue-200">
-                    <div className="flex items-center justify-between mb-2">
-                        <h2 className="text-lg font-bold text-slate-900">Текущий кредит</h2>
-                        <CreditCard className="w-5 h-5 text-blue-600" />
+            {/* Total Credits Summary */}
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-5 text-white shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <p className="text-blue-100 text-sm mb-1">Общий долг</p>
+                        <p className="text-3xl font-bold">${totalCredits.totalDebt.toLocaleString()}</p>
                     </div>
-                    <div className="text-3xl font-bold text-blue-900 mb-1">${currentLoan.nextPayment}</div>
-                    <div className="flex items-center gap-1 text-sm text-blue-700">
-                        <Calendar className="w-4 h-4" />
-                        Следующий платёж: {currentLoan.nextPaymentDate}
+                    <CreditCard className="w-12 h-12 text-white/30" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <p className="text-blue-100 text-xs mb-1">Активных кредитов</p>
+                        <p className="text-xl font-bold">{totalCredits.activeCredits}</p>
+                    </div>
+                    <div>
+                        <p className="text-blue-100 text-xs mb-1">Выплачено</p>
+                        <p className="text-xl font-bold">${totalCredits.totalPaid.toLocaleString()}</p>
                     </div>
                 </div>
-
-                <div className="p-4">
-                    {/* Progress Bar */}
-                    <div className="mb-4">
-                        <div className="flex justify-between text-sm mb-2">
-                            <span className="text-slate-600">Прогресс погашения</span>
-                            <span className="font-semibold text-slate-900">{currentLoan.progress}%</span>
-                        </div>
-                        <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full transition-all"
-                                style={{ width: `${currentLoan.progress}%` }}
-                            />
-                        </div>
-                        <div className="flex justify-between text-xs text-slate-500 mt-2">
-                            <span>Выплачено: ${currentLoan.paid.toLocaleString()}</span>
-                            <span>Осталось: ${currentLoan.remaining.toLocaleString()}</span>
-                        </div>
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div className="grid grid-cols-3 gap-2">
-                        <button className="flex flex-col items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl p-4 transition-colors">
-                            <CreditCard className="w-6 h-6" />
-                            <span className="text-xs font-medium">Оплатить</span>
-                        </button>
-                        <Link href="/farmer/loans" className="flex flex-col items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl p-4 transition-colors">
-                            <FileText className="w-6 h-6" />
-                            <span className="text-xs font-medium">Детали</span>
-                        </Link>
-                        <Link href="/farmer/fields" className="flex flex-col items-center gap-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl p-4 transition-colors">
-                            <Send className="w-6 h-6" />
-                            <span className="text-xs font-medium">Отчёт</span>
-                        </Link>
-                    </div>
-                </div>
+                <Link href="/farmer/loans" className="mt-4 inline-flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors w-full">
+                    Управление кредитами <ArrowRight className="w-4 h-4" />
+                </Link>
             </div>
 
             {/* AI Recommendation of the Day */}

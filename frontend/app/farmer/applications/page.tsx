@@ -18,9 +18,7 @@ export default function ApplicationsPage() {
     const [formData, setFormData] = useState({
         amount: "",
         purpose: "",
-        field: "",
-        income: "",
-        expenses: ""
+        term_months: ""  // Срок кредита в месяцах
     });
 
     const applications = [
@@ -143,61 +141,21 @@ export default function ApplicationsPage() {
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">
-                                Выберите поле
+                                Срок кредита (месяцев)
                             </label>
                             <select
-                                value={formData.field}
-                                onChange={(e) => setFormData({ ...formData, field: e.target.value })}
+                                value={formData.term_months}
+                                onChange={(e) => setFormData({ ...formData, term_months: e.target.value })}
                                 className="w-full bg-slate-50 border-none rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all outline-none"
                                 required
                             >
-                                <option value="">Выберите поле</option>
-                                <option>Поле №1 (Пшеница, 15 га)</option>
-                                <option>Поле №2 (Хлопок, 20 га)</option>
-                                <option>Поле №3 (Рис, 10 га)</option>
+                                <option value="">Выберите срок</option>
+                                <option value="6">6 месяцев</option>
+                                <option value="12">12 месяцев</option>
+                                <option value="18">18 месяцев</option>
+                                <option value="24">24 месяца</option>
+                                <option value="36">36 месяцев</option>
                             </select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
-                                    Доходы ($)
-                                </label>
-                                <input
-                                    type="number"
-                                    value={formData.income}
-                                    onChange={(e) => setFormData({ ...formData, income: e.target.value })}
-                                    placeholder="10000"
-                                    className="w-full bg-slate-50 border-none rounded-lg px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all outline-none"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
-                                    Расходы ($)
-                                </label>
-                                <input
-                                    type="number"
-                                    value={formData.expenses}
-                                    onChange={(e) => setFormData({ ...formData, expenses: e.target.value })}
-                                    placeholder="3000"
-                                    className="w-full bg-slate-50 border-none rounded-lg px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all outline-none"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">
-                                Фото/видео хозяйства
-                            </label>
-                            <button
-                                type="button"
-                                className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border-2 border-dashed border-slate-300 px-4 py-8 rounded-lg transition-colors"
-                            >
-                                <Camera className="w-6 h-6" />
-                                <span className="font-medium">Загрузить фото</span>
-                            </button>
                         </div>
                     </div>
 

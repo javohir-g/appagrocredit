@@ -88,13 +88,13 @@ export default function ChatPage() {
         const lowerQuery = query.toLowerCase();
 
         if (lowerQuery.includes("урож") || lowerQuery.includes("прогноз")) {
-            return "На основе спутниковых данных и ML-анал за, ожидается хороший урожай пшеницы - примерно 4.2 тонны с гектара. Это на 12% выше среднего показателя региона. Рекомендую продолжать текущий режим ухода.";
+            return "На основе спутниковых данных и ML-анализа, ожидается хороший урожай пшеницы - примерно 4.2 тонны с гектара. Это на 12% выше среднего показателя региона. Рекомендую продолжать текущий режим ухода.";
         }
         if (lowerQuery.includes("пол") || lowerQuery.includes("sug'orish")) {
             return "Рекомендую следующий полив через 2 дня. Прогноз погоды показывает сухую неделю. Оптимальное время для полива - раннее утро (5-7 часов) для минимизации испарения.";
         }
-        if (lowerQuery.includes("кредит") || lowerQuery.includes("платёж")) {
-            return "Ваш следующий платёж по активному кредиту: $2,500. Срок: 15 декабря 2024. Вы можете оплатить досрочно в разделе \"Мои кредиты\".";
+        if (lowerQuery.includes("кредит") || lowerQuery.includes("платёж") || lowerQuery.includes("оплат") || lowerQuery.includes("выплат") || lowerQuery.includes("долг")) {
+            return "Ваш следующий платёж по активному кредиту: $2,500. Срок: 15 декабря 2024. \n\n💳 Вы можете оплатить кредит прямо сейчас! Перейдите в раздел \"Кредиты\" через нижнее меню, выберите кредит и нажмите кнопку \"Оплатить\". Там вы сможете выбрать карту и сумму платежа.";
         }
         if (lowerQuery.includes("состояние") || lowerQuery.includes("поле")) {
             return "Все ваши поля в хорошем состоянии. Поле №1 (пшеница): отлично - 92 балла. Поле №2 (хлопок): требует внимания - 68 баллов, рекомендую увеличить полив. Поле №3 (рис): хорошо - 85 баллов.";
@@ -111,8 +111,8 @@ export default function ChatPage() {
                     <button
                         onClick={() => setIsVoiceMode(false)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${!isVoiceMode
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-slate-100 text-slate-600"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-slate-100 text-slate-600"
                             }`}
                     >
                         <Send className="w-4 h-4" />
@@ -121,8 +121,8 @@ export default function ChatPage() {
                     <button
                         onClick={() => setIsVoiceMode(true)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${isVoiceMode
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-slate-100 text-slate-600"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-slate-100 text-slate-600"
                             }`}
                     >
                         <Mic className="w-4 h-4" />
@@ -149,8 +149,8 @@ export default function ChatPage() {
                             </div>
                             <div className={`flex-1 ${msg.role === "user" ? "flex justify-end" : ""}`}>
                                 <div className={`inline-block max-w-[85%] px-4 py-3 rounded-2xl ${msg.role === "assistant"
-                                        ? "bg-slate-100 text-slate-900"
-                                        : "bg-emerald-600 text-white"
+                                    ? "bg-slate-100 text-slate-900"
+                                    : "bg-emerald-600 text-white"
                                     }`}>
                                     <p className="text-sm leading-relaxed">{msg.content}</p>
                                     <p className={`text-xs mt-1 ${msg.role === "assistant" ? "text-slate-500" : "text-emerald-100"
@@ -183,8 +183,8 @@ export default function ChatPage() {
                         onClick={handleVoiceInput}
                         disabled={isListening}
                         className={`w-24 h-24 rounded-full flex items-center justify-center transition-all shadow-lg ${isListening
-                                ? "bg-red-500 scale-110"
-                                : "bg-emerald-600 hover:bg-emerald-700 active:scale-95"
+                            ? "bg-red-500 scale-110"
+                            : "bg-emerald-600 hover:bg-emerald-700 active:scale-95"
                             }`}
                     >
                         <Mic className="w-12 h-12 text-white" />

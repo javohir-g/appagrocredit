@@ -57,7 +57,28 @@ export default function BankDashboard() {
 
     const fetchDashboardData = async () => {
         try {
-            // Mock data for now - replace with real API calls later
+            // Fetch real dashboard stats from API
+            const response = await fetch("http://localhost:8000/bank/dashboard/stats", {
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("token")}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setStats({
+                    newApplications: 0, // Not available from API yet
+                    approved: 0, // Not available from API yet
+                    rejected: 0, // Not available from API yet
+                    pending: data.active_credits,
+                    averageScore: 75, // Can be calculated from data later
+                    totalLoans: data.total_amount_disbursed,
+                    overduePayments: Math.max(0, data.total_outstanding * 0.05), //  Estimate
+                    overduePercentage: data.overdue_credits > 0 ? parseFloat(((data.overdue_credits / data.total_credits) * 100).toFixed(1)) : 0
+                });
+            }
+
+            // Mock recent applications - will be replaced when applications API is ready
             setRecentApplications([
                 { id: 1, farmerName: "Иван Петров", amount: 50000, riskScore: 85, riskCategory: "Low", status: "pending", date: "2024-12-03" },
                 { id: 2, farmerName: "Мария Сидорова", amount: 75000, riskScore: 68, riskCategory: "Medium", status: "pending", date: "2024-12-03" },
@@ -65,6 +86,7 @@ export default function BankDashboard() {
             ]);
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
+            //  Fallback to mock data on error
         } finally {
             setLoading(false);
         }
