@@ -42,6 +42,9 @@ export default function ApplicationsPage() {
         },
         {
             id: 3,
+            amount: 25000,
+            purpose: "Покупка оборудования",
+            date: "2024-11-20",
             status: "documents",
             statusText: "Требуются документы"
         },
@@ -80,8 +83,8 @@ export default function ApplicationsPage() {
                 <button
                     onClick={() => setActiveTab("new")}
                     className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === "new"
-                            ? "bg-emerald-600 text-white"
-                            : "text-slate-600 hover:bg-slate-50"
+                        ? "bg-emerald-600 text-white"
+                        : "text-slate-600 hover:bg-slate-50"
                         }`}
                 >
                     Новая заявка
@@ -89,8 +92,8 @@ export default function ApplicationsPage() {
                 <button
                     onClick={() => setActiveTab("status")}
                     className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === "status"
-                            ? "bg-emerald-600 text-white"
-                            : "text-slate-600 hover:bg-slate-50"
+                        ? "bg-emerald-600 text-white"
+                        : "text-slate-600 hover:bg-slate-50"
                         }`}
                 >
                     Мои заявки ({applications.length})
