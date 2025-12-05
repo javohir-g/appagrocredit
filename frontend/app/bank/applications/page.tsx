@@ -267,20 +267,17 @@ export default function ApplicationsPage() {
     );
 }
 
-<main className="flex-1 overflow-y-auto p-6 space-y-6">
-    {/* Header */}
-    <div className="flex items-center justify-between">
-        <div>
-            <h1 className="text-2xl font-bold text-slate-900">Заявки</h1>
-            <p className="text-sm text-slate-500 mt-1">Управление кредитными заявками фермеров</p>
-        </div>
-        <div className="text-sm text-slate-500">
-            Всего: <span className="font-semibold text-slate-900">{filteredApplications.length}</span> заявок
-        </div>
+    <div>
+        <h1 className="text-2xl font-bold text-slate-900">Заявки</h1>
+        <p className="text-sm text-slate-500 mt-1">Управление кредитными заявками фермеров</p>
     </div>
+    <div className="text-sm text-slate-500">
+        Всего: <span className="font-semibold text-slate-900">{filteredApplications.length}</span> заявок
+    </div>
+</div >
 
-    {/* Filters */}
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+    {/* Filters */ }
+    < div className = "bg-white rounded-xl border border-slate-200 shadow-sm p-4" >
         <div className="flex flex-col md:flex-row gap-4">
             {/* Search */}
             <div className="flex-1 relative">
@@ -319,10 +316,10 @@ export default function ApplicationsPage() {
                 <option value="high">Высокий</option>
             </select>
         </div>
-    </div>
+</div >
 
-    {/* Table */}
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    {/* Table */ }
+    < div className = "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" >
         <div className="overflow-x-auto">
             <table className="w-full">
                 <thead className="bg-slate-50 border-b border-slate-200">
@@ -378,12 +375,14 @@ export default function ApplicationsPage() {
             </table>
         </div>
 
-        {filteredApplications.length === 0 && (
-            <div className="text-center py-12">
-                <p className="text-slate-500">Заявки не найдены</p>
-            </div>
-        )}
-    </div>
-</main>
+{
+    filteredApplications.length === 0 && (
+        <div className="text-center py-12">
+            <p className="text-slate-500">Заявки не найдены</p>
+        </div>
+    )
+}
+</div >
+</main >
 );
 }

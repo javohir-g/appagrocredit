@@ -7,9 +7,9 @@ import json
 from typing import Dict, Any, Optional
 from datetime import datetime
 
-from db_manager import DatabaseManager
-from scoring_engine import ScoringEngine
-from gpt_analyzer import GPTAnalyzer
+from .db_manager import DatabaseManager
+from .scoring_engine import ScoringEngine
+from .gpt_analyzer import GPTAnalyzer
 
 
 class ScoringWorkflow:
