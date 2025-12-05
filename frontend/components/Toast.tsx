@@ -1,17 +1,6 @@
-/**
- * Toast notification component
- */
-
-import { useEffect } from 'react';
-import { CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react';
-
-export type ToastType = 'success' | 'error' | 'info';
-
-interface ToastProps {
-    message: string;
-    type: ToastType;
-    onClose: () => void;
-    duration?: number;
+type: ToastType;
+onClose: () => void;
+duration ?: number;
 }
 
 export function Toast({ message, type, onClose, duration = 5000 }: ToastProps) {
