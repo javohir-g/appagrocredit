@@ -7,3 +7,4 @@ passlib[bcrypt]
 httpx
 pydantic[email]
 pydantic-settings
+openai
