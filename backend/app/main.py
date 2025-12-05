@@ -8,6 +8,10 @@ from .core.config import settings
 from .db import init_db
 from .api import auth_router, farmers_router, farmer_extended_router, bank_router, bank_extended_router, scoring_router
 
+# Import new loan-specific routes
+from .api.routes_farmer_loan import router as farmer_loan_router
+from .api.routes_bank_loan import router as bank_loan_router
+
 # Initialize database tables
 init_db()
 
@@ -17,10 +21,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configure CORS
+# Configure CORS - Allow all origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=["*"],  # Разрешить все домены
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,8 +34,10 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(farmers_router)
 app.include_router(farmer_extended_router)
+app.include_router(farmer_loan_router)  # NEW: Farmer loan applications
 app.include_router(bank_router)
 app.include_router(bank_extended_router)
+app.include_router(bank_loan_router)  # NEW: Bank loan management
 app.include_router(scoring_router)
 
 

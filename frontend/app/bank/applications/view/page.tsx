@@ -1,360 +1,382 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
     ArrowLeft,
-    User,
-    MapPin,
-    Phone,
-    Mail,
-    Calendar,
-    DollarSign,
-    Sprout,
-    TrendingUp,
-    AlertTriangle,
-    FileText,
+    Calculator,
     CheckCircle2,
     XCircle,
-    Send
+    Loader2,
+    User,
+    DollarSign,
+    Calendar,
+    TrendingUp,
+    AlertCircle
 } from "lucide-react";
+import { bankService } from "@/services/bank-service";
+import type { ApplicationDetail, ScoringDetail } from "@/services/bank-service";
 
-interface ApplicationDetail {
-    id: number;
-    farmer: {
-        name: string;
-        email: string;
-        phone: string;
-        region: string;
-        experience: number;
-        rating: number;
-        totalLoans: number;
-        activeLoans: number;
-    };
-    farm: {
-        size: number;
-        location: string;
-        cropType: string;
-        yieldForecast: string;
-        weatherRisks: string;
-    };
-    loan: {
-        amount: number;
-        purpose: string;
-        term: number;
-        dateSubmitted: string;
-    };
-    aiAnalysis: {
-        score: number;
-        riskCategory: string;
-        factors: Array<{ name: string; value: string; impact: string }>;
-    };
-    status: string;
-}
-
-function ApplicationDetailContent() {
-    const router = useRouter();
+export default function ApplicationDetailPage() {
     const searchParams = useSearchParams();
-    const applicationId = searchParams.get("id");
-    const [loading, setLoading] = useState(true);
+    const router = useRouter();
+    const applicationId = searchParams.get('id');
+
     const [application, setApplication] = useState<ApplicationDetail | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [calculating, setCalculating] = useState(false);
+    const [updating, setUpdating] = useState(false);
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     useEffect(() => {
         if (applicationId) {
-            fetchApplication();
-        } else {
-            setLoading(false);
+            fetchApplicationDetail();
         }
     }, [applicationId]);
 
-    const fetchApplication = async () => {
+    const fetchApplicationDetail = async () => {
+        if (!applicationId) return;
+
+        setLoading(true);
         try {
-            // Mock data - replace with API call
-            const mockData: ApplicationDetail = {
-                id: parseInt(applicationId || "1"),
-                farmer: {
-                    name: "Иван Петров",
-                    email: "ivan.petrov@example.com",
-                    phone: "+998 90 123 45 67",
-                    region: "Ташкентская область",
-                    experience: 12,
-                    rating: 4.5,
-                    totalLoans: 3,
-                    activeLoans: 1
-                },
-                farm: {
-                    size: 45,
-                    location: "Ташкентская обл., Чирчикский район",
-                    cropType: "Пшеница, ячмень",
-                    yieldForecast: "Хороший (прогноз: 4.2 т/га)",
-                    weatherRisks: "Низкий риск засухи"
-                },
-                loan: {
-                    amount: 50000,
-                    purpose: "Покупка семян и удобрений для посевной кампании 2025",
-                    term: 12,
-                    dateSubmitted: "2024-12-03"
-                },
-                aiAnalysis: {
-                    score: 85,
-                    riskCategory: "Low",
-                    factors: [
-                        { name: "Платежная история", value: "Отлично", impact: "+25" },
-                        { name: "Состояние почвы", value: "Хорошее", impact: "+20" },
-                        { name: "Погодные условия", value: "Благоприятные", impact: "+15" },
-                        { name: "Опыт фермера", value: "12 лет", impact: "+15" },
-                        { name: "Размер хозяйства", value: "45 га", impact: "+10" }
-                    ]
-                },
-                status: "pending"
-            };
-            setApplication(mockData);
+            const data = await bankService.getApplicationDetail(parseInt(applicationId));
+            setApplication(data);
         } catch (error) {
-            console.error("Failed to fetch application:", error);
+            showToast("Ошибка загрузки данных", "error");
         } finally {
             setLoading(false);
         }
     };
 
-    const handleApprove = () => {
-        alert("Заявка одобрена");
+    const handleCalculateScoring = async () => {
+        if (!applicationId) return;
+
+        setCalculating(true);
+        try {
+            const scoring = await bankService.calculateScoring(parseInt(applicationId));
+
+            // Обновляем application с новым скорингом
+            setApplication(prev => prev ? { ...prev, scoring } : null);
+
+            showToast("Скоринг успешно рассчитан!", "success");
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : "Ошибка расчета скоринга", "error");
+        } finally {
+            setCalculating(false);
+        }
     };
 
-    const handleReject = () => {
-        alert("Заявка отклонена");
+    const handleUpdateStatus = async (newStatus: string) => {
+        if (!applicationId) return;
+
+        setUpdating(true);
+        try {
+            await bankService.updateStatus(parseInt(applicationId), newStatus);
+
+            // Обновляем локальный статус
+            setApplication(prev => prev ? { ...prev, status: newStatus } : null);
+
+            showToast(`Статус изменен на "${getStatusText(newStatus)}"`, "success");
+        } catch (error) {
+            showToast("Ошибка обновления статуса", "error");
+        } finally {
+            setUpdating(false);
+        }
     };
 
-    const handleRequestDocuments = () => {
-        alert("Запрос на дополнительные документы отправлен");
+    const showToast = (message: string, type: 'success' | 'error') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 4000);
+    };
+
+    const getStatusText = (status: string) => {
+        switch (status) {
+            case "approved": return "Одобрено";
+            case "rejected": return "Отклонено";
+            case "in_review": return "На доп. проверке";
+            default: return status;
+        }
+    };
+
+    const getRiskColor = (score: number) => {
+        if (score >= 70) return "text-emerald-600 bg-emerald-50";
+        if (score >= 50) return "text-amber-600 bg-amber-50";
+        return "text-red-600 bg-red-50";
     };
 
     if (loading) {
         return (
             <main className="flex-1 overflow-y-auto p-6 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-                    <p className="mt-4 text-slate-600">Загрузка заявки...</p>
-                </div>
+                <Loader2 className="w-12 h-12 animate-spin text-emerald-600" />
             </main>
         );
     }
 
-    if (!applicationId || !application) {
+    if (!application) {
         return (
-            <main className="flex-1 overflow-y-auto p-6 flex items-center justify-center">
-                <div className="text-center">
-                    <p className="text-slate-600">Заявка не найдена</p>
-                    <button onClick={() => router.back()} className="mt-4 text-emerald-600 hover:text-emerald-700 font-medium">
-                        ← Назад
+            <main className="flex-1 overflow-y-auto p-6">
+                <div className="text-center py-12">
+                    <p className="text-slate-500">Заявка не найдена</p>
+                    <button
+                        onClick={() => router.push('/bank/applications')}
+                        className="mt-4 text-emerald-600 hover:text-emerald-700 font-medium"
+                    >
+                        Вернуться к списку
                     </button>
                 </div>
             </main>
         );
     }
 
-    const getRiskColor = (category: string) => {
-        switch (category.toLowerCase()) {
-            case "low": return "text-emerald-600 bg-emerald-50";
-            case "medium": return "text-amber-600 bg-amber-50";
-            case "high": return "text-red-600 bg-red-50";
-            default: return "text-slate-600 bg-slate-50";
-        }
-    };
+    const scoring = application.scoring;
 
     return (
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed top-4 right-4 z-50 ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
+                    } text-white px-6 py-4 rounded-xl shadow-2xl animate-slide-in-right flex items-center gap-3`}>
+                    {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                    <span className="font-medium">{toast.message}</span>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => router.back()}
+                        onClick={() => router.push('/bank/applications')}
                         className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                     >
-                        <ArrowLeft className="w-5 h-5 text-slate-600" />
+                        <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900">Заявка #{application.id}</h1>
-                        <p className="text-sm text-slate-500 mt-1">{application.farmer.name} • Подана {new Date(application.loan.dateSubmitted).toLocaleDateString('ru-RU')}</p>
+                        <p className="text-sm text-slate-500 mt-1">Детальная информация и управление</p>
                     </div>
                 </div>
 
-                {/* AI Score Badge */}
-                <div className="text-center">
-                    <div className="text-4xl font-bold text-slate-900 mb-1">{application.aiAnalysis.score}<span className="text-lg text-slate-400">/100</span></div>
-                    <span className={`text-xs font-medium px-3 py-1 rounded-full ${getRiskColor(application.aiAnalysis.riskCategory)}`}>
-                        {application.aiAnalysis.riskCategory === "Low" ? "Низкий риск" : application.aiAnalysis.riskCategory === "Medium" ? "Средний риск" : "Высокий риск"}
-                    </span>
-                </div>
-            </div>
-
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column - 2/3 */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* Farmer Info */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                        <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                            <User className="w-5 h-5 text-emerald-600" />
-                            Информация о фермере
-                        </h2>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Имя</p>
-                                <p className="font-medium text-slate-900">{application.farmer.name}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Email</p>
-                                <p className="font-medium text-slate-900">{application.farmer.email}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Телефон</p>
-                                <p className="font-medium text-slate-900">{application.farmer.phone}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Регион</p>
-                                <p className="font-medium text-slate-900">{application.farmer.region}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Опыт</p>
-                                <p className="font-medium text-slate-900">{application.farmer.experience} лет</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Рейтинг</p>
-                                <p className="font-medium text-slate-900">{application.farmer.rating}/5.0</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Всего кредитов</p>
-                                <p className="font-medium text-slate-900">{application.farmer.totalLoans}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Активных кредитов</p>
-                                <p className="font-medium text-slate-900">{application.farmer.activeLoans}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Farm Analytics */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                        <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                            <Sprout className="w-5 h-5 text-emerald-600" />
-                            Аналитика хозяйства
-                        </h2>
-                        <div className="space-y-4">
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Размер поля</p>
-                                <p className="font-medium text-slate-900">{application.farm.size} га</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Местоположение</p>
-                                <p className="font-medium text-slate-900">{application.farm.location}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Выращиваемые культуры</p>
-                                <p className="font-medium text-slate-900">{application.farm.cropType}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Прогноз урожайности</p>
-                                <p className="font-medium text-emerald-600">{application.farm.yieldForecast}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Погодные риски</p>
-                                <p className="font-medium text-emerald-600">{application.farm.weatherRisks}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Loan Details */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                        <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                            <DollarSign className="w-5 h-5 text-emerald-600" />
-                            Детали кредита
-                        </h2>
-                        <div className="space-y-4">
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Запрашиваемая сумма</p>
-                                <p className="text-2xl font-bold text-slate-900">${application.loan.amount.toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Цель кредита</p>
-                                <p className="font-medium text-slate-900">{application.loan.purpose}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500 mb-1">Срок кредита</p>
-                                <p className="font-medium text-slate-900">{application.loan.term} месяцев</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Column - 1/3 */}
-                <div className="space-y-6">
-                    {/* AI Analysis */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                        <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                            <AlertTriangle className="w-5 h-5 text-emerald-600" />
-                            AI-анализ
-                        </h2>
-                        <div className="space-y-3">
-                            {application.aiAnalysis.factors.map((factor, index) => (
-                                <div key={index} className="pb-3 border-b border-slate-100 last:border-0">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="text-sm font-medium text-slate-900">{factor.name}</span>
-                                        <span className="text-sm font-semibold text-emerald-600">{factor.impact}</span>
-                                    </div>
-                                    <p className="text-xs text-slate-500">{factor.value}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                        <h2 className="text-lg font-semibold text-slate-900 mb-4">Действия</h2>
-                        <div className="space-y-3">
+                {/* Action Buttons */}
+                <div className="flex items-center gap-3">
+                    {application.status === "pending" && (
+                        <>
                             <button
-                                onClick={handleApprove}
-                                className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-3 rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                                onClick={() => handleUpdateStatus("approved")}
+                                disabled={updating}
+                                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white rounded-lg font-medium transition-colors"
                             >
                                 <CheckCircle2 className="w-4 h-4" />
                                 Одобрить
                             </button>
                             <button
-                                onClick={handleReject}
-                                className="w-full flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors font-medium"
+                                onClick={() => handleUpdateStatus("rejected")}
+                                disabled={updating}
+                                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-slate-400 text-white rounded-lg font-medium transition-colors"
                             >
                                 <XCircle className="w-4 h-4" />
                                 Отклонить
                             </button>
-                            <button
-                                onClick={handleRequestDocuments}
-                                className="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-600 px-4 py-3 rounded-lg hover:bg-blue-100 transition-colors font-medium"
-                            >
-                                <Send className="w-4 h-4" />
-                                Запросить документы
-                            </button>
-                            <button className="w-full flex items-center justify-center gap-2 bg-slate-100 text-slate-700 px-4 py-3 rounded-lg hover:bg-slate-200 transition-colors font-medium">
-                                <FileText className="w-4 h-4" />
-                                На доп. проверку
-                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column - Application Info */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Loan Details */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                        <h2 className="text-lg font-bold text-slate-900 mb-4">Детали кредита</h2>
+
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <p className="text-sm text-slate-500 mb-1">Сумма кредита</p>
+                                <p className="text-2xl font-bold text-slate-900">${application.loan_amount.toLocaleString()}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-slate-500 mb-1">Срок</p>
+                                <p className="text-xl font-semibold text-slate-900">{application.loan_term_months} месяцев</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-slate-500 mb-1">Цель кредита</p>
+                                <p className="text-base font-medium text-slate-900">{application.purpose}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-slate-500 mb-1">Дата подачи</p>
+                                <p className="text-base font-medium text-slate-900">
+                                    {new Date(application.date_submitted).toLocaleDateString('ru-RU')}
+                                </p>
+                            </div>
+                        </div>
+
+                        {application.expected_cash_flow && (
+                            <div className="mt-4 pt-4 border-t border-slate-100">
+                                <p className="text-sm text-slate-500 mb-1">Ожидаемый годовой доход</p>
+                                <p className="text-lg font-semibold text-emerald-600">
+                                    ${application.expected_cash_flow.toLocaleString()}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Scoring Results */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-bold text-slate-900">AI Скоринг</h2>
+
+                            {!scoring && (
+                                <button
+                                    onClick={handleCalculateScoring}
+                                    disabled={calculating}
+                                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white rounded-lg font-medium transition-colors"
+                                >
+                                    {calculating ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Расчет...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Calculator className="w-4 h-4" />
+                                            Рассчитать скоринг
+                                        </>
+                                    )}
+                                </button>
+                            )}
+                        </div>
+
+                        {scoring ? (
+                            <div className="space-y-6">
+                                {/* Total Score */}
+                                <div className="text-center p-6 bg-slate-50 rounded-xl">
+                                    <p className="text-sm text-slate-500 mb-2">Итоговый балл</p>
+                                    <div className="flex items-center justify-center gap-4">
+                                        <div className="text-5xl font-bold text-emerald-600">
+                                            {scoring.total_score}
+                                        </div>
+                                        <div className="text-2xl text-slate-400">/100</div>
+                                    </div>
+                                    <div className="mt-4 w-full bg-slate-200 rounded-full h-3">
+                                        <div
+                                            className="bg-emerald-500 h-3 rounded-full transition-all"
+                                            style={{ width: `${scoring.total_score}%` }}
+                                        />
+                                    </div>
+                                    <span className={`inline-block mt-3 text-sm font-medium px-3 py-1 rounded-full ${getRiskColor(scoring.total_score)}`}>
+                                        {scoring.total_score >= 70 ? "Низкий риск" : scoring.total_score >= 50 ? "Средний риск" : "Высокий риск"}
+                                    </span>
+                                </div>
+
+                                {/* Component Scores */}
+                                <div className="space-y-3">
+                                    <h3 className="font-semibold text-slate-700">Детализация баллов</h3>
+                                    {[
+                                        { label: 'Земля', value: scoring.land_score, max: 25 },
+                                        { label: 'Техника', value: scoring.tech_score, max: 25 },
+                                        { label: 'Культуры', value: scoring.crop_score, max: 20 },
+                                        { label: 'Кредитная история', value: scoring.ban_score, max: 15 },
+                                        { label: 'Инфраструктура', value: scoring.infra_score, max: 15 },
+                                        { label: 'Геометрия', value: scoring.geo_score, max: 10 },
+                                        { label: 'Диверсификация', value: scoring.diversification_score, max: 10 },
+                                    ].map((item, index) => (
+                                        <div key={index} className="flex items-center gap-3">
+                                            <span className="w-32 text-sm text-slate-600">{item.label}</span>
+                                            <div className="flex-1 bg-slate-100 rounded-full h-2">
+                                                <div
+                                                    className="bg-emerald-500 h-2 rounded-full transition-all"
+                                                    style={{ width: `${(item.value / item.max) * 100}%` }}
+                                                />
+                                            </div>
+                                            <span className="w-16 text-sm font-medium text-right">
+                                                {item.value}/{item.max}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Financial Metrics */}
+                                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-100">
+                                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                                        <p className="text-xs text-blue-600 mb-1">Процентная ставка</p>
+                                        <p className="text-2xl font-bold text-blue-700">
+                                            {(scoring.interest_rate * 100).toFixed(1)}%
+                                        </p>
+                                    </div>
+                                    <div className="text-center p-4 bg-purple-50 rounded-lg">
+                                        <p className="text-xs text-purple-600 mb-1">Ежемесячный платеж</p>
+                                        <p className="text-2xl font-bold text-purple-700">
+                                            ${scoring.monthly_payment.toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <div className="text-center p-4 bg-amber-50 rounded-lg">
+                                        <p className="text-xs text-amber-600 mb-1">DTI Ratio</p>
+                                        <p className="text-2xl font-bold text-amber-700">
+                                            {(scoring.debt_to_income_ratio * 100).toFixed(1)}%
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                <p className="text-slate-500">Скоринг еще не рассчитан</p>
+                                <p className="text-sm text-slate-400 mt-1">Нажмите кнопку выше для расчета</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Column - Farmer Info */}
+                <div className="space-y-6">
+                    {/* Farmer Profile */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                        <h2 className="text-lg font-bold text-slate-900 mb-4">Профиль фермера</h2>
+
+                        <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100">
+                            <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <User className="w-8 h-8 text-emerald-600" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-slate-900">{application.farmer_id}</p>
+                                <p className="text-sm text-slate-500">ID Фермера</p>
+                            </div>
+                        </div>
+
+                        {application.farmer_profile && (
+                            <div className="space-y-3">
+                                <div>
+                                    <p className="text-xs text-slate-500">Опыт</p>
+                                    <p className="font-medium">{application.farmer_profile.farming_experience_years || 0} лет</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500">Образование</p>
+                                    <p className="font-medium">{application.farmer_profile.education_level || 'Не указано'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-slate-500">Кредитов ранее</p>
+                                    <p className="font-medium">{application.farmer_profile.number_of_loans || 0}</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Status */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                        <h3 className="font-semibold text-slate-900 mb-3">Статус заявки</h3>
+                        <div className={`p-4 rounded-lg text-center ${application.status === 'approved' ? 'bg-emerald-50' :
+                                application.status === 'rejected' ? 'bg-red-50' :
+                                    'bg-amber-50'
+                            }`}>
+                            <p className={`text-lg font-bold ${application.status === 'approved' ? 'text-emerald-700' :
+                                    application.status === 'rejected' ? 'text-red-700' :
+                                        'text-amber-700'
+                                }`}>
+                                {getStatusText(application.status)}
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
-    );
-}
-
-export default function ApplicationDetailPage() {
-    return (
-        <Suspense fallback={
-            <main className="flex-1 overflow-y-auto p-6 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-                    <p className="mt-4 text-slate-600">Загрузка...</p>
-                </div>
-            </main>
-        }>
-            <ApplicationDetailContent />
-        </Suspense>
     );
 }
