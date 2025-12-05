@@ -2,7 +2,7 @@
  * API Client для работы с loan applications (фермер)
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://app-agrocredit.onrender.com';
 
 export interface LoanApplicationData {
     requested_loan_amount: number;
