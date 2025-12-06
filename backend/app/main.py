@@ -45,7 +45,36 @@ async def startup_event():
     print("🚀 Starting AgroCredit AI...")
     print("📊 Initializing database...")
     seed_database()
-    print("✓ Application ready!")
+    
+    # Check OpenAI API Key
+    print("\n🔑 Checking OpenAI API configuration...")
+    api_key = os.getenv('OPENAI_API_KEY')
+    
+    if not api_key:
+        print("   ⚠️  WARNING: OPENAI_API_KEY not set!")
+        print("   ⚠️  GPT scoring will NOT work")
+        print("   ⚠️  Set OPENAI_API_KEY in environment variables")
+    else:
+        # Mask key for security
+        masked_key = api_key[:8] + "..." + api_key[-4:] if len(api_key) > 12 else "***"
+        print(f"   ✓ OPENAI_API_KEY found: {masked_key}")
+        
+        # Test API connection
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+            
+            # Simple test call
+            print("   Testing OpenAI API connection...")
+            response = client.models.list()
+            print(f"   ✓ OpenAI API is accessible!")
+            print(f"   ✓ Available models: {len(response.data)} found")
+            
+        except Exception as e:
+            print(f"   ❌ OpenAI API test failed: {str(e)}")
+            print(f"   ⚠️  GPT scoring may not work properly")
+    
+    print("\n✓ Application ready!")
 
 # Configure CORS - Allow all (no credentials used)
 app.add_middleware(
