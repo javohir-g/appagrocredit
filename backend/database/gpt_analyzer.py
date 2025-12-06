@@ -25,7 +25,7 @@ class GPTAnalyzer:
             raise ValueError("OpenAI API key not provided. Set OPENAI_API_KEY environment variable.")
         
         self.client = OpenAI(api_key=self.api_key)
-        self.model = "gpt-4"  # Можно изменить на gpt-4-turbo или gpt-3.5-turbo
+        self.model = "gpt-4o"  # Можно изменить на gpt-4-turbo или gpt-3.5-turbo
     
     def format_scoring_for_gpt(self, scoring_data: Dict[str, Any], 
                                scoring_result: Dict[str, Any]) -> str:
