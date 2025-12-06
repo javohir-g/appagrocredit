@@ -30,7 +30,7 @@ def seed_database():
         print(f"⚠ Database check warning: {e}")
 
 # Initialize database tables
-# init_db()  # <--- DISABLED: Conflicting with raw SQL schema (schema.sql). We use db_manager for DB init.
+init_db()  # <--- RE-ENABLED: Necessary for 'users' table creation (auth). Conflicting farms table is now aligned in models.
 
 
 app = FastAPI(
