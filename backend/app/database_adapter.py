@@ -108,19 +108,15 @@ class DatabaseAdapter:
                 farm_columns = [row[1] for row in cursor.fetchall()]
                 
                 if 'farmer_id' not in farm_columns:
-                    print("⚠️  MIGRATION: farmer_id column missing in farms table, adding it...")
+                    print("⚠️  MIGRATION: farmer_id column missing in farms table, recreating...")
                     
-                    # Пересоздаем farms table
-                    cursor = conn.execute("SELECT * FROM farms")
-                    existing_farms = cursor.fetchall()
-                    
-                    if existing_farms:
-                        print(f"   Found {len(existing_farms)} existing farms, migrating...")
-                        conn.execute("DROP TABLE farms")
+                    # ПОЛНОСТЬЮ удаляем farms и пересоздаем
+                    conn.execute("DROP TABLE IF EXISTS farms")
+                    print("   Dropped old farms table")
                     
                     # Создаем farms с правильной схемой
                     conn.execute("""
-                        CREATE TABLE IF NOT EXISTS farms (
+                        CREATE TABLE farms (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             farmer_id INTEGER NOT NULL,
                             farm_size_acres REAL NOT NULL CHECK(farm_size_acres > 0),
@@ -135,7 +131,11 @@ class DatabaseAdapter:
                             FOREIGN KEY (farmer_id) REFERENCES farmers(id) ON DELETE CASCADE
                         )
                     """)
-                    print("   ✓ farms table recreated with farmer_id column")
+                    
+                    # Создаем индекс
+                    conn.execute("CREATE INDEX IF NOT EXISTS idx_farms_farmer_id ON farms(farmer_id)")
+                    
+                    print("   ✓ farms table recreated with farmer_id column and index")
                 else:
                     print("✓ farms table schema up to date (farmer_id exists)")
                     
