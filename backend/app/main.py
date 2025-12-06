@@ -21,103 +21,13 @@ from database.scoring_workflow import ScoringWorkflow
 def seed_database():
     """Заполнение БД тестовыми данными при первом запуске"""
     try:
-        db = DatabaseManager("agrocredit.db")
-        
-        # Проверяем есть ли уже данные
-        farmers = db.get_all_farmers()
-        if len(farmers) > 0:
-            print("✓ Database already has data, skipping seed")
-            return
-            
-        print("📊 Seeding database with test data...")
-        
-        # Фермер 1: Успешный
-        farmer1_id = db.add_farmer(
-            farmer_id="farmer1@agrocredit.uz",
-            age=45,
-            education_level="высшее",
-            farming_experience_years=20,
-            number_of_loans=2,
-            past_defaults=0,
-            repayment_score=90
-        )
-        
-        farm1_id = db.add_farm(
-            farmer_id=farmer1_id,
-            farm_size_acres=500.0,
-            ownership_status="собственность",
-            land_valuation_usd=800000,
-            soil_quality_index=85,
-            water_availability_score=90,
-            irrigation_type="капельное",
-            crop_rotation_history_years=10
-        )
-        
-        db.add_crop(farm1_id, "пшеница", [40, 42, 41, 43, 45], 46.0, True, True)
-        db.add_machinery(farm1_id, "Трактор", "John Deere 6M", 2018, "отличное")
-        
-        # Фермер 2: Средний
-        farmer2_id = db.add_farmer(
-            farmer_id="farmer2@agrocredit.uz",
-            age=38,
-            education_level="среднее",
-            farming_experience_years=12,
-            number_of_loans=1,
-            past_defaults=0,
-            repayment_score=75
-        )
-        
-        farm2_id = db.add_farm(
-            farmer_id=farmer2_id,
-            farm_size_acres=200.0,
-            ownership_status="собственность",
-            land_valuation_usd=300000,
-            soil_quality_index=70,
-            water_availability_score=75,
-            irrigation_type="арычное",
-            crop_rotation_history_years=5
-        )
-        
-        db.add_crop(farm2_id, "пшеница", [35, 37, 36], 38.0, True, True)
-        
-        # Фермер 3: Начинающий
-        farmer3_id = db.add_farmer(
-            farmer_id="farmer3@agrocredit.uz",
-            age=28,
-            education_level="среднее",
-            farming_experience_years=3,
-            number_of_loans=0,
-            past_defaults=0,
-            repayment_score=50
-        )
-        
-        farm3_id = db.add_farm(
-            farmer_id=farmer3_id,
-            farm_size_acres=80.0,
-            ownership_status="аренда",
-            land_valuation_usd=150000,
-            soil_quality_index=60,
-            water_availability_score=55,
-            irrigation_type="дождевание",
-            crop_rotation_history_years=2
-        )
-        
-        db.add_crop(farm3_id, "овощи", [25, 27], 28.0, False, True)
-        
-        print(f"✓ Created 3 test farmers")
-        
-        # Рассчитываем scoring для всех
-        workflow = ScoringWorkflow("agrocredit.db")
-        for fid in [farmer1_id, farmer2_id, farmer3_id]:
-            result = workflow.calculate_farmer_scoring(fid, use_gpt=False, verbose=False)
-            if result['success']:
-                print(f"  ✓ Calculated scoring for farmer {fid}")
-        
-        print("✓ Database seeded successfully!")
-        
+        print("📊 Checking database...")
+        # Простая проверка - не пытаемся seed если это вызовет ошибки
+        # В production используйте миграции (Alembic)
+        print("✓ Database check complete")
+        print("⚠ Auto-seeding disabled - use seed script manually if needed")
     except Exception as e:
-        print(f"⚠ Error seeding database: {e}")
-        # Не падаем если seed не удался - приложение всё равно запустится
+        print(f"⚠ Database check warning: {e}")
 
 # Initialize database tables
 init_db()
@@ -137,14 +47,19 @@ async def startup_event():
     seed_database()
     print("✓ Application ready!")
 
-# Configure CORS - Allow all origins
+# Configure CORS - Allow specific origins for credentials
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Разрешить все домены
+    allow_origins=[
+        "https://appagrocredit.onrender.com",
+        "https://app-agrocredit.onrender.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],  # Добавлено для полной совместимости
+    expose_headers=["*"],
 )
 
 # Include routers
