@@ -43,9 +43,91 @@ class LoanApplicationResponse(BaseModel):
     risk_category: Optional[str]
 
 
+class FarmerSummary(BaseModel):
+    """Сводка по фермеру"""
+    total_debt: float
+    active_credits: int
+    total_paid: float
+    credit_score: int
+    currency: str = "USD"
+
+
 # ========================================================================
 # Endpoints
 # ========================================================================
+
+@router.get("/summary", response_model=FarmerSummary)
+async def get_farmer_summary(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Получить сводку по фермеру (для главной страницы)
+    """
+    try:
+        adapter = get_db_adapter()
+        # Получаем фермера через email
+        farmer_id = current_user.email
+        
+        # Используем db_manager напрямую для эффективного запроса
+        with adapter.db_manager.get_connection() as conn:
+            # Находим фермера
+            cursor = conn.execute("SELECT id, repayment_score FROM farmers WHERE farmer_id = ?", (farmer_id,))
+            farmer = cursor.fetchone()
+            
+            if not farmer:
+                return FarmerSummary(
+                    total_debt=0,
+                    active_credits=0,
+                    total_paid=0,
+                    credit_score=0
+                )
+            
+            db_id = farmer['id']
+            score = farmer['repayment_score'] or 0
+            
+            # Находим фермы этого фермера
+            cursor = conn.execute("SELECT id FROM farms WHERE farmer_id = ?", (db_id,))
+            farms = cursor.fetchall()
+            farm_ids = [f['id'] for f in farms]
+            
+            if not farm_ids:
+                return FarmerSummary(
+                    total_debt=0,
+                    active_credits=0,
+                    total_paid=0,
+                    credit_score=score
+                )
+                
+            # Считаем активные кредиты (approved loan requests)
+            placeholders = ','.join(['?'] * len(farm_ids))
+            query = f"""
+                SELECT COUNT(*) as count, SUM(requested_loan_amount) as total 
+                FROM loan_requests 
+                WHERE farm_id IN ({placeholders}) AND status = 'approved'
+            """
+            
+            cursor = conn.execute(query, farm_ids)
+            stats = cursor.fetchone()
+            
+            active_count = stats['count'] or 0
+            total_debt = stats['total'] or 0
+            
+            return FarmerSummary(
+                total_debt=total_debt,
+                active_credits=active_count,
+                total_paid=0, # Пока нет таблицы платежей
+                credit_score=score
+            )
+            
+    except Exception as e:
+        print(f"Error fetching farmer summary: {e}")
+        return FarmerSummary(
+            total_debt=0,
+            active_credits=0,
+            total_paid=0,
+            credit_score=0
+        )
+
 
 @router.post("/loan-applications", response_model=LoanApplicationResponse, status_code=status.HTTP_201_CREATED)
 async def create_loan_application(
@@ -54,11 +136,6 @@ async def create_loan_application(
 ):
     """
     Создать новую заявку на кредит (фермер)
-    
-    - **requested_loan_amount**: Запрашиваемая сумма
-    - **loan_term_months**: Срок кредита в месяцах
-    - **loan_purpose**: Цель кредита  
-    - **expected_cash_flow_after_loan**: Ожидаемый денежный поток (опц.)
     """
     try:
         adapter = get_db_adapter()

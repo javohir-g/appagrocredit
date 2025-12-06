@@ -16,16 +16,49 @@ import {
 } from "lucide-react";
 
 export default function FarmerHome() {
-    // Mock data - в будущем подключить к API
-    const totalCredits = {
-        totalDebt: 80000,  // Общий долг (remaining из всех кредитов)
-        activeCredits: 2,   // Количество активных кредитов
-        totalPaid: 40000    // Всего выплачено
-    };
+    interface FarmerSummary {
+        total_debt: number;
+        active_credits: number;
+        total_paid: number;
+        credit_score: number;
+    }
 
-    const aiRecommendation = {
-        title: "Рекомендация по поливу",
-        message: "На основе прогноза погоды, рекомендуем полив через 2 дня. Ожидается сухая погода в течение недели.",
+    const [summary, setSummary] = useState<FarmerSummary>({
+        total_debt: 0,
+        active_credits: 0,
+        total_paid: 0,
+        credit_score: 0
+    });
+
+    useEffect(() => {
+        const fetchSummary = async () => {
+            try {
+                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://app-agrocredit.onrender.com';
+                const token = localStorage.getItem('token');
+
+                if (!token) return;
+
+                const response = await fetch(`${API_URL}/api/farmer/summary`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setSummary(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch summary:", error);
+            }
+        };
+
+        fetchSummary();
+    }, []);
+
+    // Helper to format currency
+    const formatMoney = (amount: number) => {
+        return amount.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
     };
 
     return (
@@ -35,18 +68,18 @@ export default function FarmerHome() {
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <p className="text-blue-100 text-sm mb-1">Общий долг</p>
-                        <p className="text-3xl font-bold">${totalCredits.totalDebt.toLocaleString()}</p>
+                        <p className="text-3xl font-bold">{formatMoney(summary.total_debt)}</p>
                     </div>
                     <CreditCard className="w-12 h-12 text-white/30" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <p className="text-blue-100 text-xs mb-1">Активных кредитов</p>
-                        <p className="text-xl font-bold">{totalCredits.activeCredits}</p>
+                        <p className="text-xl font-bold">{summary.active_credits}</p>
                     </div>
                     <div>
-                        <p className="text-blue-100 text-xs mb-1">Выплачено</p>
-                        <p className="text-xl font-bold">${totalCredits.totalPaid.toLocaleString()}</p>
+                        <p className="text-blue-100 text-xs mb-1">Кредитный рейтинг</p>
+                        <p className="text-xl font-bold">{summary.credit_score}</p>
                     </div>
                 </div>
                 <Link href="/farmer/loans" className="mt-4 inline-flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors w-full">
