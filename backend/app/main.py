@@ -30,7 +30,7 @@ def seed_database():
         print(f"⚠ Database check warning: {e}")
 
 # Initialize database tables
-init_db()
+# init_db()  # <--- DISABLED: Conflicting with raw SQL schema (schema.sql). We use db_manager for DB init.
 
 
 app = FastAPI(
