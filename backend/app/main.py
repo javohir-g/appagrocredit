@@ -102,6 +102,65 @@ def health_check():
     return {"status": "healthy"}
 
 
+@app.get("/api/db-check")
+def database_check():
+    """
+    Проверка состояния базы данных
+    Показывает какие таблицы существуют и их структуру
+    """
+    try:
+        from .database_adapter import get_db_adapter
+        adapter = get_db_adapter()
+        
+        with adapter.db_manager.get_connection() as conn:
+            # Получить список таблиц
+            cursor = conn.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' 
+                ORDER BY name
+            """)
+            tables = [row[0] for row in cursor.fetchall()]
+            
+            # Получить структуру таблицы farmers
+            farmers_structure = None
+            if 'farmers' in tables:
+                cursor = conn.execute("PRAGMA table_info(farmers)")
+                farmers_structure = [
+                    {
+                        "name": row[1],
+                        "type": row[2],
+                        "notnull": bool(row[3]),
+                        "pk": bool(row[5])
+                    }
+                    for row in cursor.fetchall()
+                ]
+            
+            # Подсчитать количество записей
+            counts = {}
+            for table in tables:
+                try:
+                    cursor = conn.execute(f"SELECT COUNT(*) FROM {table}")
+                    counts[table] = cursor.fetchone()[0]
+                except:
+                    counts[table] = "error"
+            
+        return {
+            "status": "ok",
+            "database_exists": True,
+            "tables": tables,
+            "record_counts": counts,
+            "farmers_structure": farmers_structure,
+            "has_farmer_id_column": farmers_structure and any(col["name"] == "farmer_id" for col in farmers_structure) if farmers_structure else False
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
+
+
 @app.get("/api")
 def api_root():
     """API root endpoint"""
