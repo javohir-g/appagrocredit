@@ -58,30 +58,6 @@ def get_current_user(
         role = UserRole.farmer
         email = MOCK_FARMER_EMAIL
     else:
-        try:
-            role = UserRole(x_role.lower())
-            email = MOCK_FARMER_EMAIL if role == UserRole.farmer else MOCK_BANK_EMAIL
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid role: {x_role}"
-            )
-
-    # Check if mock user exists
-    user = db.query(User).filter(User.email == email).first()
-    
-    if not user:
-        # Create mock user if not exists
-        user = User(
-            email=email,
-            hashed_password=get_password_hash("mockpassword"),
-            role=role
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        
-    return user
 
 
 def require_role(*roles: UserRole):
