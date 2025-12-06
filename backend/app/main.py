@@ -44,6 +44,16 @@ async def startup_event():
     """Initialize and seed database on startup"""
     print("🚀 Starting AgroCredit AI...")
     print("📊 Initializing database...")
+    
+    # Run migrations (fixes missing columns in existing tables)
+    try:
+        from .database_adapter import get_db_adapter
+        adapter = get_db_adapter()
+        print("🔄 Running schema migrations...")
+        adapter._migrate_add_farmer_id_column()
+    except Exception as e:
+        print(f"❌ Migration failed: {e}")
+
     seed_database()
     
     # Check OpenAI API Key
