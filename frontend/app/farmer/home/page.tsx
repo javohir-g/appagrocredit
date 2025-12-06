@@ -61,6 +61,12 @@ export default function FarmerHome() {
         return amount.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
     };
 
+    // Mock recommendation for now
+    const aiRecommendation = {
+        title: "Рекомендация по поливу",
+        message: "На основе прогноза погоды, рекомендуем полив через 2 дня. Ожидается сухая погода в течение недели.",
+    };
+
     return (
         <div className="p-4 space-y-4">
             {/* Total Credits Summary */}
