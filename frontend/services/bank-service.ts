@@ -52,9 +52,7 @@ export const bankService = {
      */
     async getAllApplications(status?: string): Promise<ApplicationSummary[]> {
         const url = `${API_BASE_URL}/api/bank/applications${status ? `?status=${status}` : ''}`;
-        const response = await fetch(url, {
-            credentials: 'include',
-        });
+        const response = await fetch(url);
 
         if (!response.ok) {
             throw new Error('Failed to fetch applications');
@@ -67,9 +65,7 @@ export const bankService = {
      * Получить детали заявки
      */
     async getApplicationDetail(id: number): Promise<ApplicationDetail> {
-        const response = await fetch(`${API_BASE_URL}/api/bank/applications/${id}`, {
-            credentials: 'include',
-        });
+        const response = await fetch(`${API_BASE_URL}/api/bank/applications/${id}`);
 
         if (!response.ok) {
             throw new Error('Failed to fetch application detail');
@@ -84,7 +80,6 @@ export const bankService = {
     async calculateScoring(id: number): Promise<ScoringDetail> {
         const response = await fetch(`${API_BASE_URL}/api/bank/applications/${id}/calculate-score`, {
             method: 'POST',
-            credentials: 'include',
         });
 
         if (!response.ok) {
@@ -104,7 +99,6 @@ export const bankService = {
             headers: {
                 'Content-Type': 'application/json',
             },
-            credentials: 'include',
             body: JSON.stringify({ status }),
         });
 
@@ -125,9 +119,7 @@ export const bankService = {
         total_farmers: number;
         average_score: number;
     }> {
-        const response = await fetch(`${API_BASE_URL}/api/bank/statistics`, {
-            credentials: 'include',
-        });
+        const response = await fetch(`${API_BASE_URL}/api/bank/statistics`);
 
         if (!response.ok) {
             throw new Error('Failed to fetch statistics');

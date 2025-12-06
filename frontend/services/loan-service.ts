@@ -37,7 +37,6 @@ export const loanService = {
             headers: {
                 'Content-Type': 'application/json',
             },
-            credentials: 'include',
             body: JSON.stringify(data),
         });
 
@@ -53,9 +52,7 @@ export const loanService = {
      * Получить все заявки текущего фермера
      */
     async getMyApplications(): Promise<LoanApplication[]> {
-        const response = await fetch(`${API_BASE_URL}/api/farmer/loan-applications`, {
-            credentials: 'include',
-        });
+        const response = await fetch(`${API_BASE_URL}/api/farmer/loan-applications`);
 
         if (!response.ok) {
             throw new Error('Failed to fetch applications');
@@ -68,9 +65,7 @@ export const loanService = {
      * Получить детали конкретной заявки
      */
     async getApplicationDetail(id: number): Promise<LoanApplication> {
-        const response = await fetch(`${API_BASE_URL}/api/farmer/loan-applications/${id}`, {
-            credentials: 'include',
-        });
+        const response = await fetch(`${API_BASE_URL}/api/farmer/loan-applications/${id}`);
 
         if (!response.ok) {
             throw new Error('Failed to fetch application detail');

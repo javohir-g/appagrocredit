@@ -47,19 +47,13 @@ async def startup_event():
     seed_database()
     print("✓ Application ready!")
 
-# Configure CORS - Allow specific origins for credentials
+# Configure CORS - Allow all (no credentials used)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://appagrocredit.onrender.com",
-        "https://app-agrocredit.onrender.com",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000"
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,  # No credentials = wildcard OK
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
 )
 
 # Include routers
