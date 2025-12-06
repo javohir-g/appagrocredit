@@ -51,35 +51,58 @@ class DatabaseAdapter:
         Returns:
             Словарь с данными созданной заявки
         """
-        # Найти или создать фермера
-        farmer = self.get_or_create_farmer_by_email(farmer_email)
-        
-        # Получить или создать ферму для фермера
-        farms = self.db_manager.get_farms_by_farmer(farmer['id'])
-        if not farms:
-            # Создаем ферму по умолчанию
-            farm_id = self.db_manager.add_farm(
-                farmer_id=farmer['id'],
-                farm_size_acres=100.0,
-                ownership_status="собственность"
+        try:
+            print(f"[DB_ADAPTER] Creating loan application for: {farmer_email}")
+            print(f"[DB_ADAPTER] Loan data: {loan_data}")
+            
+            # Найти или создать фермера
+            print(f"[DB_ADAPTER] Getting/creating farmer...")
+            farmer = self.get_or_create_farmer_by_email(farmer_email)
+            print(f"[DB_ADAPTER] Farmer found: ID={farmer.get('id')}, farmer_id={farmer.get('farmer_id')}")
+            
+            # Получить или создать ферму для фермера
+            print(f"[DB_ADAPTER] Getting farms for farmer ID={farmer['id']}")
+            farms = self.db_manager.get_farms_by_farmer(farmer['id'])
+            
+            if not farms:
+                print(f"[DB_ADAPTER] No farms found, creating default farm...")
+                # Создаем ферму по умолчанию
+                farm_id = self.db_manager.add_farm(
+                    farmer_id=farmer['id'],
+                    farm_size_acres=100.0,
+                    ownership_status="собственность"
+                )
+                print(f"[DB_ADAPTER] Farm created with ID={farm_id}")
+            else:
+                farm_id = farms[0]['id']
+                print(f"[DB_ADAPTER] Using existing farm ID={farm_id}")
+            
+            # Создаем заявку
+            print(f"[DB_ADAPTER] Creating loan request for farm_id={farm_id}")
+            loan_id = self.db_manager.add_loan_request(
+                farm_id=farm_id,
+                loan_purpose=loan_data.get('loan_purpose', 'Не указано'),
+                requested_loan_amount=loan_data['requested_loan_amount'],
+                loan_term_months=loan_data.get('loan_term_months', 12),
+                expected_cash_flow_after_loan=loan_data.get('expected_cash_flow_after_loan')
             )
-        else:
-            farm_id = farms[0]['id']
-        
-        # Создаем заявку
-        loan_id = self.db_manager.add_loan_request(
-            farm_id=farm_id,
-            loan_purpose=loan_data.get('loan_purpose', 'Не указано'),
-            requested_loan_amount=loan_data['requested_loan_amount'],
-            loan_term_months=loan_data.get('loan_term_months', 12),
-            expected_cash_flow_after_loan=loan_data.get('expected_cash_flow_after_loan')
-        )
-        
-        # Получаем созданную заявку
-        loan_requests = self.db_manager.get_loan_requests_by_farm(farm_id)
-        created_loan = next((lr for lr in loan_requests if lr['id'] == loan_id), None)
-        
-        return self._format_loan_application(created_loan, farmer, farm_id)
+            print(f"[DB_ADAPTER] Loan request created with ID={loan_id}")
+            
+            # Получаем созданную зав ку
+            loan_requests = self.db_manager.get_loan_requests_by_farm(farm_id)
+            created_loan = next((lr for lr in loan_requests if lr['id'] == loan_id), None)
+            
+            print(f"[DB_ADAPTER] Formatting response...")
+            response = self._format_loan_application(created_loan, farmer, farm_id)
+            print(f"[DB_ADAPTER] ✓ Success! Loan application ID={loan_id} created")
+            
+            return response
+            
+        except Exception as e:
+            print(f"[DB_ADAPTER] ❌ ERROR in create_loan_application: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise
     
     def get_all_loan_applications(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
         """
