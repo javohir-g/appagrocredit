@@ -38,22 +38,19 @@ class DatabaseAdapter:
         """Добавить колонку farmer_id в таблицу farmers если отсутствует"""
         try:
             with self.db_manager.get_connection() as conn:
-                # Проверяем наличие колонки
+                # Проверяем наличие колонки в farmers
                 cursor = conn.execute("PRAGMA table_info(farmers)")
                 columns = [row[1] for row in cursor.fetchall()]
                 
                 if 'farmer_id' not in columns:
-                    print("⚠️  MIGRATION: farmer_id column missing, adding it...")
+                    print("⚠️  MIGRATION: farmer_id column missing in farmers table, adding it...")
                     
                     # SQLite не поддерживает ALTER COLUMN, нужно пересоздать таблицу
-                    # Но сначала сохраним данные
                     cursor = conn.execute("SELECT * FROM farmers")
                     existing_data = cursor.fetchall()
                     
                     if existing_data:
                         print(f"   Found {len(existing_data)} existing farmers, migrating...")
-                        
-                        # Создаем временную таблицу
                         conn.execute("ALTER TABLE farmers RENAME TO farmers_old")
                         
                         # Создаем новую таблицу с правильной схемой
@@ -83,9 +80,7 @@ class DatabaseAdapter:
                             FROM farmers_old
                         """)
                         
-                        # Удаляем старую таблицу
                         conn.execute("DROP TABLE farmers_old")
-                        
                         print(f"   ✓ Migration complete! Migrated {len(existing_data)} farmers")
                     else:
                         # Нет данных, просто пересоздаем таблицу
@@ -106,7 +101,43 @@ class DatabaseAdapter:
                         """)
                         print("   ✓ farmers table recreated with farmer_id column")
                 else:
-                    print("✓ Database schema up to date (farmer_id exists)")
+                    print("✓ farmers table schema up to date (farmer_id exists)")
+                
+                # НОВАЯ МИГРАЦИЯ: Проверяем farms table
+                cursor = conn.execute("PRAGMA table_info(farms)")
+                farm_columns = [row[1] for row in cursor.fetchall()]
+                
+                if 'farmer_id' not in farm_columns:
+                    print("⚠️  MIGRATION: farmer_id column missing in farms table, adding it...")
+                    
+                    # Пересоздаем farms table
+                    cursor = conn.execute("SELECT * FROM farms")
+                    existing_farms = cursor.fetchall()
+                    
+                    if existing_farms:
+                        print(f"   Found {len(existing_farms)} existing farms, migrating...")
+                        conn.execute("DROP TABLE farms")
+                    
+                    # Создаем farms с правильной схемой
+                    conn.execute("""
+                        CREATE TABLE IF NOT EXISTS farms (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            farmer_id INTEGER NOT NULL,
+                            farm_size_acres REAL NOT NULL CHECK(farm_size_acres > 0),
+                            ownership_status TEXT NOT NULL CHECK(ownership_status IN ('собственность', 'аренда', 'совладение')),
+                            land_valuation_usd REAL CHECK(land_valuation_usd >= 0),
+                            soil_quality_index INTEGER CHECK(soil_quality_index >= 0 AND soil_quality_index <= 100),
+                            water_availability_score INTEGER CHECK(water_availability_score >= 0 AND water_availability_score <= 100),
+                            irrigation_type TEXT CHECK(irrigation_type IN ('капельное', 'дождевание', 'поверхностное', 'арычное', 'отсутствует')),
+                            crop_rotation_history_years INTEGER DEFAULT 0 CHECK(crop_rotation_history_years >= 0),
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (farmer_id) REFERENCES farmers(id) ON DELETE CASCADE
+                        )
+                    """)
+                    print("   ✓ farms table recreated with farmer_id column")
+                else:
+                    print("✓ farms table schema up to date (farmer_id exists)")
                     
         except Exception as e:
             print(f"⚠️  Migration error: {e}")
