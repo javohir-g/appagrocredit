@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import jwt, JWTError
 from passlib.context import CryptContext
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, Header
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from .config import settings
@@ -12,10 +12,6 @@ from ..models.user import User, UserRole
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
-
-from fastapi import Header
-from ..models.user import User, UserRole
 
 # Mock user data
 MOCK_FARMER_EMAIL = "farmer@example.com"
@@ -31,13 +27,14 @@ def get_db():
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password (kept for compatibility)"""
-    return pwd_context.hash(password)
+    """Hash a password - simplified for demo"""
+    # Avoid bcrypt issues on deployment
+    return f"hashed_{password}"
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password (kept for compatibility)"""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password - simplified for demo"""
+    return hashed_password == f"hashed_{plain_password}"
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -50,14 +47,35 @@ def get_current_user(
     db: Session = Depends(get_db)
 ) -> User:
     """
-    Get the current user based on X-Role header for v1.0 (No Auth).
-    Creates a default user for the role if it doesn't exist.
+    Simplified mock auth - no bcrypt to avoid deployment issues
     """
-    if not x_role:
-        # Default to farmer if no header
-        role = UserRole.farmer
-        email = MOCK_FARMER_EMAIL
-    else:
+    # Default to farmer role
+    role = UserRole.farmer
+    email = MOCK_FARMER_EMAIL
+    
+    if x_role:
+        try:
+            role = UserRole(x_role.lower())
+            email = MOCK_FARMER_EMAIL if role == UserRole.farmer else MOCK_BANK_EMAIL
+        except ValueError:
+            # Invalid role, use default
+            pass
+
+    # Check if mock user exists
+    user = db.query(User).filter(User.email == email).first()
+    
+    if not user:
+        # Create mock user without bcrypt
+        user = User(
+            email=email,
+            hashed_password=get_password_hash("mock"),  # Simple hash
+            role=role
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+    return user
 
 
 def require_role(*roles: UserRole):
