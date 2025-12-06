@@ -30,6 +30,86 @@ class DatabaseAdapter:
             self.db_manager.initialize_database()
         except Exception as e:
             print(f"Database already initialized: {e}")
+        
+        # MIGRATION: Add farmer_id column if missing
+        self._migrate_add_farmer_id_column()
+    
+    def _migrate_add_farmer_id_column(self):
+        """Добавить колонку farmer_id в таблицу farmers если отсутствует"""
+        try:
+            with self.db_manager.get_connection() as conn:
+                # Проверяем наличие колонки
+                cursor = conn.execute("PRAGMA table_info(farmers)")
+                columns = [row[1] for row in cursor.fetchall()]
+                
+                if 'farmer_id' not in columns:
+                    print("⚠️  MIGRATION: farmer_id column missing, adding it...")
+                    
+                    # SQLite не поддерживает ALTER COLUMN, нужно пересоздать таблицу
+                    # Но сначала сохраним данные
+                    cursor = conn.execute("SELECT * FROM farmers")
+                    existing_data = cursor.fetchall()
+                    
+                    if existing_data:
+                        print(f"   Found {len(existing_data)} existing farmers, migrating...")
+                        
+                        # Создаем временную таблицу
+                        conn.execute("ALTER TABLE farmers RENAME TO farmers_old")
+                        
+                        # Создаем новую таблицу с правильной схемой
+                        conn.execute("""
+                            CREATE TABLE farmers (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                farmer_id TEXT UNIQUE NOT NULL,
+                                age INTEGER NOT NULL CHECK(age >= 18 AND age <= 100),
+                                education_level TEXT NOT NULL,
+                                farming_experience_years INTEGER NOT NULL CHECK(farming_experience_years >= 0),
+                                number_of_loans INTEGER DEFAULT 0,
+                                past_defaults INTEGER DEFAULT 0,
+                                repayment_score INTEGER DEFAULT 0,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        
+                        # Копируем данные, используя id как farmer_id
+                        conn.execute("""
+                            INSERT INTO farmers (id, farmer_id, age, education_level, 
+                                               farming_experience_years, number_of_loans,
+                                               past_defaults, repayment_score)
+                            SELECT id, 'farmer_' || id, age, education_level,
+                                   farming_experience_years, number_of_loans,
+                                   past_defaults, repayment_score
+                            FROM farmers_old
+                        """)
+                        
+                        # Удаляем старую таблицу
+                        conn.execute("DROP TABLE farmers_old")
+                        
+                        print(f"   ✓ Migration complete! Migrated {len(existing_data)} farmers")
+                    else:
+                        # Нет данных, просто пересоздаем таблицу
+                        conn.execute("DROP TABLE IF EXISTS farmers")
+                        conn.execute("""
+                            CREATE TABLE farmers (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                farmer_id TEXT UNIQUE NOT NULL,
+                                age INTEGER NOT NULL CHECK(age >= 18 AND age <= 100),
+                                education_level TEXT NOT NULL,
+                                farming_experience_years INTEGER NOT NULL CHECK(farming_experience_years >= 0),
+                                number_of_loans INTEGER DEFAULT 0,
+                                past_defaults INTEGER DEFAULT 0,
+                                repayment_score INTEGER DEFAULT 0,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        print("   ✓ farmers table recreated with farmer_id column")
+                else:
+                    print("✓ Database schema up to date (farmer_id exists)")
+                    
+        except Exception as e:
+            print(f"⚠️  Migration error: {e}")
     
     # ========================================================================
     # Loan Applications (заявки)
