@@ -51,7 +51,8 @@ export default function ProfilePage() {
 
     const fetchProfile = async () => {
         try {
-            const response = await fetch("http://localhost:8000/farmer/profile", {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://app-agrocredit.onrender.com';
+            const response = await fetch(`${API_URL}/farmer/profile`, {
                 headers: {
                     "Authorization": `Bearer ${localStorage.getItem("token")}`
                 }

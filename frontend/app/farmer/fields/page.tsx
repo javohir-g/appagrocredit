@@ -34,7 +34,8 @@ export default function FieldsPage() {
 
     const fetchFields = async () => {
         try {
-            const response = await fetch("http://localhost:8000/farmer/fields", {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://app-agrocredit.onrender.com';
+            const response = await fetch(`${API_URL}/farmer/fields`, {
                 headers: {
                     "Authorization": `Bearer ${localStorage.getItem("token")}`
                 }
